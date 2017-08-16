@@ -18,3 +18,8 @@ Run `python play.py`
 Use <kbd>&uarr;</kbd> or <kbd>Space</kbd> key to play and <kbd>Esc</kbd> to close the game.
 
 ![Flappy Tippy](screenshot.png)
+
+## References
+
+- [sourabhv/FlapPyBird](https://github.com/sourabhv/FlapPyBird)
+- [【ぱちゅコン風ドット】ご注文はうさぎですか?](http://seiga.nicovideo.jp/seiga/im4119007)
