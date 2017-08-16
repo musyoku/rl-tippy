@@ -1,6 +1,8 @@
 # ティッピーぴょんぴょん (Flappy Tippy)
 
-A Flappy Bird Clone made using [python-pygame](http://www.pygame.org)
+Flappy Tippy (A Flappy Bird Clone) Clone made using [python-pygame](http://www.pygame.org).
+
+非売品です。
 
 ## Installation
 
