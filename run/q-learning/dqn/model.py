@@ -1,5 +1,6 @@
 import sys, os
 import numpy as np
+import chainer
 from chainer import Variable, cuda
 sys.path.append(os.path.join("..", "..", ".."))
 from rl.playground.tippy import ACTION_NO_OP, ACTION_JUMP
@@ -38,7 +39,7 @@ class Model():
 			action_idx = np.random.randint(0, len(self.actions))
 		else:
 			# select a greedy action
-			with chianer.using_config("train", False):
+			with chainer.using_config("train", False):
 				state = Variable(state)
 				if self.gpu_device >= 0:
 					state.to_gpu(self.gpu_device)
