@@ -38,8 +38,6 @@ class TippyAgent(object):
 		self.screen = None
 		self.fpsclock = None
 
-		self.action = ACTION_NO_OP
-
 	def play(self):
 		pygame.init()
 		self.fpsclock = pygame.time.Clock()
@@ -194,17 +192,23 @@ class TippyAgent(object):
 		playerFlapped = False # True when player flaps
 
 		while True:
-			rl_action = self.action
+			rl_action = self.agent_action()
 			rl_reward = 0
 			for event in pygame.event.get():
 				if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
 					pygame.quit()
 					sys.exit()
-				if (event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP)) or self.action == ACTION_JUMP:
+				if (event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP)):
 					if playery > -2 * self.images["player"][0].get_height():
 						playerVelY = playerFlapAcc
 						playerFlapped = True
-						self.sounds["wing"].play()
+						# self.sounds["wing"].play()
+						
+			if rl_action == ACTION_JUMP:
+				if playery > -2 * self.images["player"][0].get_height():
+					playerVelY = playerFlapAcc
+					playerFlapped = True
+					self.sounds["wing"].play()
 
 			# check for crash here
 			crashTest = self.check_crash({"x": playerx, "y": playery, "index": playerIndex}, upperPipes, lowerPipes)
@@ -286,9 +290,9 @@ class TippyAgent(object):
 			rl_next_frame = rl_next_frame[0:72, 0:72]
 			# Image.fromarray(rl_next_frame).convert("RGB").save("screen.bmp")
 
-			self.agent_step(rl_action, rl_reward, rl_next_frame, score)
+			self.agent_observe(rl_action, rl_reward, rl_next_frame, score)
 
-	def agent_step(self, action, reward, next_frame, score):
+	def agent_observe(self, action, reward, next_frame, score):
 		raise NotImplementedError()
 
 	def agent_end(self, action, reward, score):

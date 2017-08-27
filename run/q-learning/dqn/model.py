@@ -48,7 +48,7 @@ class Model():
 				q_max = xp.max(q_data)
 				q_max = xp.min(q_data)
 
-		action = self.actions(action_idx)
+		action = self.actions[action_idx]
 
 		# No-op
 		self.no_op_count = self.no_op_count + 1 if action == ACTION_NO_OP else 0
