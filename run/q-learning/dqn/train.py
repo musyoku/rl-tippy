@@ -9,6 +9,7 @@ from rl.playground.tippy import TippyAgent, OBSERVATION_WIDTH, OBSERVATION_HEIGH
 from rl.utils.args import args
 from rl.utils.optim import get_optimizer
 from rl.utils.config import load_config, save_config
+from rl.utils.print import printr, printb
 
 class Trainer(TippyAgent):
 	def __init__(self, dqn, optimizer, replay_frames, conf):
@@ -25,6 +26,7 @@ class Trainer(TippyAgent):
 		self.exploration_rate = conf.initial_exploration_rate
 		self.final_exploration_rate = conf.final_exploration_rate
 		self.discount_factor = conf.discount_factor
+		self.target_update_frequency = conf.target_update_frequency
 
 		# replay memory
 		self.replay_frames = replay_frames
@@ -34,8 +36,12 @@ class Trainer(TippyAgent):
 
 		self.replay_start_time = conf.replay_start_size
 		self.ptr = 0
+		self.current_episode = 1
+		self.time_step_for_episode = 0
 		self.total_time_step = 0
 		self.policy_frozen = False
+		self.avg_loss = 0
+		self.last_loss = 0
 
 		self.last_state = np.zeros((self.agent_history_length, OBSERVATION_HEIGHT, OBSERVATION_WIDTH), dtype=np.float32)
 
@@ -50,12 +56,18 @@ class Trainer(TippyAgent):
 		return action
 
 	# 行動した結果を観測
-	def agent_observe(self, state, action, reward, next_frame, score):
+	def agent_observe(self, state, action, reward, next_frame, score, remaining_lives):
 		self.store_transition_in_replay_memory(state, action, reward)
 		self.total_time_step += 1
+		self.time_step_for_episode += 1
 
 		self.last_state = np.roll(self.last_state, 1, axis=0)
 		self.last_state[0] = state
+
+		printr("episode {} - step {} - total {} - memory size {}/{} - loss {}".format(
+			self.current_episode, self.time_step_for_episode, self.total_time_step, 
+			min(self.ptr, self.replay_memory_size), self.replay_memory_size, 
+			self.last_loss))
 
 		if self.total_time_step < self.replay_start_time:
 			self.exploration_rate = self.initial_exploration_rate # ランダムに行動してreplay memoryを増やしていく
@@ -65,6 +77,10 @@ class Trainer(TippyAgent):
 
 		if self.total_time_step > self.batchsize and self.total_time_step % 10 == 0:
 			self.update_model_parameters()
+
+		if self.total_time_step % self.target_update_frequency == 0:
+			print("target updated.")
+			self.dqn.update_target()
 
 	# エピソード終了
 	def agent_end(self, state, action, reward, score):
@@ -76,6 +92,9 @@ class Trainer(TippyAgent):
 
 		if self.total_time_step > self.batchsize and self.total_time_step % 10 == 0:
 			self.update_model_parameters()
+
+		self.current_episode += 1
+		self.time_step_for_episode = 0
 
 	def store_transition_in_replay_memory(self, state, action, reward, episode_ends=False):
 		self.replay_frames[self.ptr] = state
@@ -106,6 +125,11 @@ class Trainer(TippyAgent):
 
 			loss = self.compute_loss(state, action, reward, next_state, episode_ends)
 			self.optimizer.update(lossfun=lambda: loss)
+			self.avg_loss += float(loss.data)
+
+			if self.total_time_step % 50 == 0:
+				self.last_loss = self.avg_loss / 50
+				self.avg_loss = 0
 
 	def compute_loss(self, state, action, reward, next_state, episode_ends):
 		xp = self.dqn.model.xp

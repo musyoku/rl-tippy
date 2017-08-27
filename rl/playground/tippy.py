@@ -16,9 +16,9 @@ OBSERVATION_WIDTH = 72
 OBSERVATION_HEIGHT = 72
 
 class TippyAgent(object):
-	def __init__(self, train=True):
+	def __init__(self, lives=5):
 		self.fps = 30
-		self.train = train
+		self.lives = lives
 		self.screenwidth  = 288
 		self.screenheight = 512
 		self.pipegapsize  = 100 # gap between upper and lower part of pipe
@@ -38,6 +38,9 @@ class TippyAgent(object):
 		self.screen = None
 		self.fpsclock = None
 		self.rl_prev_frame = None
+
+	def set_lives(self, lives):
+		self.lives = lives
 
 	def play(self):
 		pygame.init()
@@ -102,10 +105,22 @@ class TippyAgent(object):
 			self.get_hitmask(self.images["player"][1]),
 			# self.get_hitmask(self.images["player"][2]),
 		)
+
+		playerShmVals = {"val": 0, "dir": 1}
+		playerIndexGen = cycle([0, 1])
+		playery = int((self.screenheight - self.images["player"][0].get_height()) / 2)
+		movementInfo = {
+			"playery": playery + playerShmVals["val"],
+			"basex": 0,
+			"playerIndexGen": playerIndexGen,
+		}
 		while True:
-			movementInfo = self.show_welcome_animation()
 			crashInfo = self.run_main_game(movementInfo)
-			self.show_game_over_screen(crashInfo)
+
+		# while True:
+		# 	movementInfo = self.show_welcome_animation()
+		# 	crashInfo = self.run_main_game(movementInfo)
+		# 	self.show_game_over_screen(crashInfo)
 
 	def capture_screen(self):
 		buf = self.screen.get_buffer()
@@ -225,8 +240,12 @@ class TippyAgent(object):
 			crashTest = self.check_crash({"x": playerx, "y": playery, "index": playerIndex}, upperPipes, lowerPipes)
 			if crashTest[0]:
 				rl_reward = -1
-				if self.train == False:
-					self.agent_end(rl_action, rl_reward)
+				self.lives -= 1
+				if self.lives < 1:
+					assert self.rl_prev_frame is not None
+					if self.rl_prev_frame is not None:
+						self.agent_end(self.rl_prev_frame, rl_action, rl_reward, score)
+					self.sounds["die"].play()
 					return {
 						"y": playery,
 						"groundCrash": crashTest[1],
@@ -236,15 +255,15 @@ class TippyAgent(object):
 						"score": score,
 						"playerVelY": playerVelY,
 					}
-
-			# check for score
-			playerMidPos = playerx + self.images["player"][0].get_width() / 2
-			for pipe in upperPipes:
-				pipeMidPos = pipe["x"] + self.images["pipe"][0].get_width() / 2
-				if pipeMidPos <= playerMidPos < pipeMidPos + 4:
-					score += 1
-					self.sounds["point"].play()
-					rl_reward = 1
+			else:
+				# check for score
+				playerMidPos = playerx + self.images["player"][0].get_width() / 2
+				for pipe in upperPipes:
+					pipeMidPos = pipe["x"] + self.images["pipe"][0].get_width() / 2
+					if pipeMidPos <= playerMidPos < pipeMidPos + 4:
+						score += 1
+						self.sounds["point"].play()
+						rl_reward = 1
 
 			# playerIndex basex change
 			if (loopIter + 1) % 3 == 0:
@@ -302,9 +321,12 @@ class TippyAgent(object):
 			# Image.fromarray(rl_next_frame).convert("RGB").save("screen.bmp")
 
 			if self.rl_prev_frame is not None:
-				self.agent_observe(self.rl_prev_frame, rl_action, rl_reward, rl_next_frame, score)
+				self.agent_observe(self.rl_prev_frame, rl_action, rl_reward, rl_next_frame, score, self.lives)
 
 			self.rl_prev_frame = rl_next_frame
+
+	def agent_start(self):
+		raise NotImplementedError()
 
 	def agent_observe(self, action, reward, next_frame, score):
 		raise NotImplementedError()

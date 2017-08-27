@@ -11,8 +11,8 @@ class Config():
 		self.agent_history_length = 	4
 		self.agent_action_frequency = 	4
 		self.replay_memory_size = 		10 ** 6
-		self.replay_start_size = 		5 * 10 ** 4
-		self.target_update_frequency =	10 ** 4
+		self.replay_start_size = 		5 * 10 ** 3
+		self.target_update_frequency =	10 ** 3
 		self.discount_factor = 			0.99
 		self.initial_exploration_rate =	1.0
 		self.final_exploration_rate =	0.1
@@ -99,3 +99,6 @@ class Model():
 		if os.path.isfile(filename):
 			print("loading {} ...".format(filename))
 			serializers.load_hdf5(filename, self.model)
+
+	def update_target(self):
+		self.target = copy.deepcopy(self.model)
