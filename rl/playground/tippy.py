@@ -37,6 +37,7 @@ class TippyAgent(object):
 
 		self.screen = None
 		self.fpsclock = None
+		self.rl_prev_frame = None
 
 	def play(self):
 		pygame.init()
@@ -105,6 +106,16 @@ class TippyAgent(object):
 			movementInfo = self.show_welcome_animation()
 			crashInfo = self.run_main_game(movementInfo)
 			self.show_game_over_screen(crashInfo)
+
+	def capture_screen(self):
+		buf = self.screen.get_buffer()
+		image = Image.frombytes("RGBA",self.screen.get_size(),buf.raw)
+		del buf
+		frame = np.asarray(image, dtype=np.uint8)
+		frame = 0.2126 * frame[..., 2] + 0.7152 * frame[..., 1] + 0.0722 * frame[..., 0]
+		frame = scipy.misc.imresize(frame, size=(96, 72), interp="bilinear")
+		frame = frame[0:72, 0:72]
+		return frame
 
 	def show_welcome_animation(self):
 		"""Shows welcome screen animation of flappy bird"""
@@ -203,7 +214,7 @@ class TippyAgent(object):
 						playerVelY = playerFlapAcc
 						playerFlapped = True
 						# self.sounds["wing"].play()
-						
+
 			if rl_action == ACTION_JUMP:
 				if playery > -2 * self.images["player"][0].get_height():
 					playerVelY = playerFlapAcc
@@ -290,7 +301,10 @@ class TippyAgent(object):
 			rl_next_frame = rl_next_frame[0:72, 0:72]
 			# Image.fromarray(rl_next_frame).convert("RGB").save("screen.bmp")
 
-			self.agent_observe(rl_action, rl_reward, rl_next_frame, score)
+			if self.rl_prev_frame is not None:
+				self.agent_observe(self.rl_prev_frame, rl_action, rl_reward, rl_next_frame, score)
+
+			self.rl_prev_frame = rl_next_frame
 
 	def agent_observe(self, action, reward, next_frame, score):
 		raise NotImplementedError()

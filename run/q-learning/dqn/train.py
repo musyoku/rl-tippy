@@ -1,7 +1,8 @@
+from __future__ import print_function
 import sys, os, chainer
 import numpy as np
 from datetime import datetime
-from model import Model
+from model import Model, Config
 from chainer import functions
 sys.path.append(os.path.join("..", "..", ".."))
 from rl.playground.tippy import TippyAgent, OBSERVATION_WIDTH, OBSERVATION_HEIGHT, ACTION_NO_OP, ACTION_JUMP
@@ -32,7 +33,7 @@ class Trainer(TippyAgent):
 		self.replay_episode_ends = np.zeros((self.replay_memory_size,), dtype=np.bool)
 
 		self.replay_start_time = conf.replay_start_size
-		self.replay_memory_pointer = 0
+		self.ptr = 0
 		self.total_time_step = 0
 		self.policy_frozen = False
 
@@ -49,15 +50,12 @@ class Trainer(TippyAgent):
 		return action
 
 	# 行動した結果を観測
-	def agent_observe(self, action, reward, next_frame, score):
-		self.replay_frames[self.replay_memory_pointer] = next_frame
-		self.replay_actions[self.replay_memory_pointer] = action
-		self.replay_rewards[self.replay_memory_pointer] = reward
-		self.replay_memory_pointer = (self.replay_memory_pointer + 1) % self.replay_memory_size
+	def agent_observe(self, state, action, reward, next_frame, score):
+		self.store_transition_in_replay_memory(state, action, reward)
 		self.total_time_step += 1
 
 		self.last_state = np.roll(self.last_state, 1, axis=0)
-		self.last_state[0] = next_frame
+		self.last_state[0] = state
 
 		if self.total_time_step < self.replay_start_time:
 			self.exploration_rate = self.initial_exploration_rate # ランダムに行動してreplay memoryを増やしていく
@@ -66,13 +64,27 @@ class Trainer(TippyAgent):
 		self.decrease_exploration_rate()
 
 		if self.total_time_step > self.batchsize and self.total_time_step % 10 == 0:
-			self.update_model()
+			self.update_model_parameters()
 
 	# エピソード終了
-	def agent_end(self, action, reward, score):
-		pass
+	def agent_end(self, state, action, reward, score):
+		self.store_transition_in_replay_memory(state, action, reward, episode_ends=True)
+		self.total_time_step += 1
 
-	def update_model(self):
+		self.last_state = np.roll(self.last_state, 1, axis=0)
+		self.last_state[0] = state
+
+		if self.total_time_step > self.batchsize and self.total_time_step % 10 == 0:
+			self.update_model_parameters()
+
+	def store_transition_in_replay_memory(self, state, action, reward, episode_ends=False):
+		self.replay_frames[self.ptr] = state
+		self.replay_actions[self.ptr] = action
+		self.replay_rewards[self.ptr] = reward
+		self.replay_episode_ends[self.ptr] = episode_ends
+		self.ptr = (self.ptr + 1) % self.replay_memory_size
+
+	def update_model_parameters(self):
 		if self.policy_frozen is False:
 			# Sample random minibatch of transitions from replay memory
 			randint_max = min(self.total_time_step, self.replay_memory_size) - 1
@@ -92,6 +104,9 @@ class Trainer(TippyAgent):
 				state[batch_idx] = self.replay_frames[start:memory_idx]
 				next_state[batch_idx] = self.replay_frames[start + 1:memory_idx + 1]
 
+			loss = self.compute_loss(state, action, reward, next_state, episode_ends)
+			self.optimizer.update(lossfun=lambda: loss)
+
 	def compute_loss(self, state, action, reward, next_state, episode_ends):
 		xp = self.dqn.model.xp
 		batchsize = state.shape[0]
@@ -108,14 +123,14 @@ class Trainer(TippyAgent):
 			else:
 				new_target_value = np.sign(reward[batch_idx]) + self.discount_factor * max_target_q_data[batch_idx]
 			action_idx = action[batch_idx]
-			old_target_value = target[batch_idx, action_index]
+			old_target_value = target[batch_idx, action_idx]
 			diff = new_target_value - old_target_value
 			# 1を超えるものはすべて1にする。（-1も同様）
 			if diff > 1.0:
 				new_target_value = 1.0 + old_target_value	
 			elif diff < -1.0:
 				new_target_value = -1.0 + old_target_value	
-			target[batch_idx, action_index] = new_target_value
+			target[batch_idx, action_idx] = new_target_value
 
 		return functions.mean_squared_error(target, q)
 			
@@ -149,5 +164,5 @@ if __name__ == "__main__":
 		os.mkdir(sandbox)
 	except:
 		pass
-	conf = load_config(os.path.join(sandbox, "conf.json"))
+	conf = load_config(os.path.join(sandbox, "conf.json"), default=Config())
 	run_training_loop()
