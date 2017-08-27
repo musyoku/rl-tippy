@@ -9,10 +9,10 @@ from itertools import cycle
 from pygame.locals import *
 from PIL import Image
 
-ACTION_DO_NOTHING = 0
-ACTION_TAP = 1
+ACTION_NO_OP = 0
+ACTION_JUMP = 1
 
-class Tippy(object):
+class TippyAgent(object):
 	def __init__(self, train=True):
 		self.fps = 30
 		self.train = train
@@ -35,7 +35,7 @@ class Tippy(object):
 		self.screen = None
 		self.fpsclock = None
 
-		self.action = ACTION_DO_NOTHING
+		self.action = ACTION_NO_OP
 
 	def play(self):
 		pygame.init()
@@ -197,7 +197,7 @@ class Tippy(object):
 				if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
 					pygame.quit()
 					sys.exit()
-				if (event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP)) or self.action == ACTION_TAP:
+				if (event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP)) or self.action == ACTION_JUMP:
 					if playery > -2 * self.images["player"][0].get_height():
 						playerVelY = playerFlapAcc
 						playerFlapped = True

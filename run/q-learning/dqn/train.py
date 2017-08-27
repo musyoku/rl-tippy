@@ -1,9 +1,12 @@
 import argparse
 import chainer
+from model import Model
 from agent import Agent
 
 
 def train():
+	agent = Agent()
+	model = Model()
 	pass
 
 
