@@ -1,4 +1,4 @@
-import sys, os
+import sys, os, copy
 import numpy as np
 import chainer
 from chainer import Variable, cuda
@@ -9,17 +9,18 @@ import rl.utils.stream as nn
 class Model():
 	def __init__(self, no_op_max=4):
 		self.model = nn.Stream(
-			nn.Convolution2D(None, 16, ksize=8),
+			nn.Convolution2D(4, 16, ksize=8),
 			nn.BatchNormalization(16),
 			nn.ReLU(),
-			nn.Convolution2D(None, 32, ksize=4),
+			nn.Convolution2D(16, 32, ksize=4),
 			nn.BatchNormalization(32),
 			nn.ReLU(),
-			nn.Linear(None, 256),
+			nn.Linear(32, 256),
 			nn.BatchNormalization(256),
 			nn.ReLU(),
-			nn.Linear(None, 2),
+			nn.Linear(256, 2),
 		)
+		self.target = copy.deepcopy(self.model)
 		self.gpu_device = -1
 		self.actions = [ACTION_NO_OP, ACTION_JUMP]
 		self.no_op_count = 0
@@ -40,10 +41,7 @@ class Model():
 		else:
 			# select a greedy action
 			with chainer.using_config("train", False):
-				state = Variable(state)
-				if self.gpu_device >= 0:
-					state.to_gpu(self.gpu_device)
-				q_data = self.model(state).data
+				q_data = self.compute_q_value(state).data
 				xp = self.model.xp
 				action_idx = xp.argmax(q_data)
 				q_max = xp.max(q_data)
@@ -57,6 +55,17 @@ class Model():
 			action = self.actions[np.random.randint(1, len(self.actions))]
 
 		return action, q_max, q_min
+
+	def compute_q_value(self, state):
+		if self.gpu_device >= 0:
+			state = cuda.to_gpu(state, device=self.gpu_device)
+		return self.model(state)
+
+	def compute_target_q_value(self, state):
+		with chainer.using_config("train", False):
+			if self.gpu_device >= 0:
+				state = cuda.to_gpu(state, device=self.gpu_device)
+			return self.target(state)
 
 	def save(self):
 		filename = "model.hdf5"

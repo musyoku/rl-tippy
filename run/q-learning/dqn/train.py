@@ -2,6 +2,7 @@ import sys, os, chainer
 import numpy as np
 from datetime import datetime
 from model import Model
+from chainer import functions
 sys.path.append(os.path.join("..", "..", ".."))
 from rl.playground.tippy import TippyAgent, OBSERVATION_WIDTH, OBSERVATION_HEIGHT, ACTION_NO_OP, ACTION_JUMP
 from rl.utils.args import args
@@ -22,6 +23,7 @@ class Trainer(TippyAgent):
 		self.initial_exploration_rate = conf.initial_exploration_rate
 		self.exploration_rate = conf.initial_exploration_rate
 		self.final_exploration_rate = conf.final_exploration_rate
+		self.discount_factor = conf.discount_factor
 
 		# replay memory
 		self.replay_frames = replay_frames
@@ -90,6 +92,32 @@ class Trainer(TippyAgent):
 				state[batch_idx] = self.replay_frames[start:memory_idx]
 				next_state[batch_idx] = self.replay_frames[start + 1:memory_idx + 1]
 
+	def compute_loss(self, state, action, reward, next_state, episode_ends):
+		xp = self.dqn.model.xp
+		batchsize = state.shape[0]
+
+		q = self.dqn.compute_q_value(state)
+		max_target_q_data = self.dqn.compute_target_q_value(next_state).data
+		max_target_q_data = xp.amax(max_target_q_data, axis=1)
+
+		target = q.data.copy()
+
+		for batch_idx in range(batchsize):
+			if episode_ends[batch_idx] is True:
+				new_target_value = np.sign(reward[batch_idx])
+			else:
+				new_target_value = np.sign(reward[batch_idx]) + self.discount_factor * max_target_q_data[batch_idx]
+			action_idx = action[batch_idx]
+			old_target_value = target[batch_idx, action_index]
+			diff = new_target_value - old_target_value
+			# 1を超えるものはすべて1にする。（-1も同様）
+			if diff > 1.0:
+				new_target_value = 1.0 + old_target_value	
+			elif diff < -1.0:
+				new_target_value = -1.0 + old_target_value	
+			target[batch_idx, action_index] = new_target_value
+
+		return functions.mean_squared_error(target, q)
 			
 	# Exploration rate is linearly annealed to its final value
 	def decrease_exploration_rate(self):
@@ -108,6 +136,8 @@ def setup_optimizer(model):
 
 def run_training_loop():
 	dqn = Model()
+	if args.gpu_device != -1:
+		dqn.to_gpu(args.gpu_device)
 	optimizer = setup_optimizer(dqn.model)
 	replay_frames = np.zeros((conf.replay_memory_size, OBSERVATION_HEIGHT, OBSERVATION_WIDTH), dtype=np.float32)
 	agent = Trainer(dqn, optimizer, replay_frames, conf)
