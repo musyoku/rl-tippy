@@ -9,41 +9,42 @@ from itertools import cycle
 from pygame.locals import *
 from PIL import Image
 
-class Tippy(object):
-	def __init__(self):
-		self.FPS = 30
-		self.SCREENWIDTH  = 288
-		self.SCREENHEIGHT = 512
-		# amount by which base can maximum shift to left
-		self.PIPEGAPSIZE  = 100 # gap between upper and lower part of pipe
-		self.BASEY        = self.SCREENHEIGHT * 0.79
-		# image, sound and hitmask  dicts
-		self.IMAGES, self.SOUNDS, self.HITMASKS = {}, {}, {}
+ACTION_DO_NOTHING = 0
+ACTION_TAP = 1
 
-		self.PLAYER_IMAGES = (
+class Tippy(object):
+	def __init__(self, train=True):
+		self.fps = 30
+		self.train = train
+		self.screenwidth  = 288
+		self.screenheight = 512
+		self.pipegapsize  = 100 # gap between upper and lower part of pipe
+		self.basey        = self.screenheight * 0.79
+		self.images = {}
+		self.sounds = {}
+		self.hitmasks = {}
+
+		self.player_images = (
 			"assets/sprites/tippy-upflap.png",
 			"assets/sprites/tippy-midflap.png",
 		)
 
-		self.BACKGROUND_IMAGE = "assets/sprites/background.png"
-		self.PIPE_IMAGE = "assets/sprites/pipe.png"
+		self.background_image = "assets/sprites/background.png"
+		self.pipe_image = "assets/sprites/pipe.png"
 
-		# list of pipes
-		self.PIPES_LIST = (
-			"assets/sprites/pipe.png",
-		)
-		
-		self.SCREEN = None
-		self.FPSCLOCK = None
+		self.screen = None
+		self.fpsclock = None
+
+		self.action = ACTION_DO_NOTHING
 
 	def play(self):
 		pygame.init()
-		self.FPSCLOCK = pygame.time.Clock()
-		self.SCREEN = pygame.display.set_mode((self.SCREENWIDTH, self.SCREENHEIGHT))
+		self.fpsclock = pygame.time.Clock()
+		self.screen = pygame.display.set_mode((self.screenwidth, self.screenheight))
 		pygame.display.set_caption("Flappy Tippy")
 
 		# numbers sprites for score display
-		self.IMAGES["numbers"] = (
+		self.images["numbers"] = (
 			pygame.image.load("assets/sprites/0.png").convert_alpha(),
 			pygame.image.load("assets/sprites/1.png").convert_alpha(),
 			pygame.image.load("assets/sprites/2.png").convert_alpha(),
@@ -57,11 +58,11 @@ class Tippy(object):
 		)
 
 		# game over sprite
-		self.IMAGES["gameover"] = pygame.image.load("assets/sprites/gameover.png").convert_alpha()
+		self.images["gameover"] = pygame.image.load("assets/sprites/gameover.png").convert_alpha()
 		# message sprite for welcome screen
-		self.IMAGES["message"] = pygame.image.load("assets/sprites/message.png").convert_alpha()
+		self.images["message"] = pygame.image.load("assets/sprites/message.png").convert_alpha()
 		# base (ground) sprite
-		self.IMAGES["base"] = pygame.image.load("assets/sprites/base.png").convert_alpha()
+		self.images["base"] = pygame.image.load("assets/sprites/base.png").convert_alpha()
 
 		# sounds
 		if "win" in sys.platform:
@@ -69,35 +70,35 @@ class Tippy(object):
 		else:
 			soundExt = ".ogg"
 
-		self.SOUNDS["die"]    = pygame.mixer.Sound("assets/audio/die" + soundExt)
-		self.SOUNDS["hit"]    = pygame.mixer.Sound("assets/audio/hit" + soundExt)
-		self.SOUNDS["point"]  = pygame.mixer.Sound("assets/audio/point" + soundExt)
-		self.SOUNDS["swoosh"] = pygame.mixer.Sound("assets/audio/swoosh" + soundExt)
-		self.SOUNDS["wing"]   = pygame.mixer.Sound("assets/audio/wing" + soundExt)
+		self.sounds["die"]    = pygame.mixer.Sound("assets/audio/die" + soundExt)
+		self.sounds["hit"]    = pygame.mixer.Sound("assets/audio/hit" + soundExt)
+		self.sounds["point"]  = pygame.mixer.Sound("assets/audio/point" + soundExt)
+		self.sounds["swoosh"] = pygame.mixer.Sound("assets/audio/swoosh" + soundExt)
+		self.sounds["wing"]   = pygame.mixer.Sound("assets/audio/wing" + soundExt)
 
-		self.IMAGES["background"] = pygame.image.load(self.BACKGROUND_IMAGE).convert()
+		self.images["background"] = pygame.image.load(self.background_image).convert()
 
-		self.IMAGES["player"] = (
-			pygame.image.load(self.PLAYER_IMAGES[0]).convert_alpha(),
-			pygame.image.load(self.PLAYER_IMAGES[1]).convert_alpha(),
+		self.images["player"] = (
+			pygame.image.load(self.player_images[0]).convert_alpha(),
+			pygame.image.load(self.player_images[1]).convert_alpha(),
 		)
 
-		self.IMAGES["pipe"] = (
-			pygame.transform.rotate(pygame.image.load(self.PIPE_IMAGE).convert_alpha(), 180),
-			pygame.image.load(self.PIPE_IMAGE).convert_alpha(),
+		self.images["pipe"] = (
+			pygame.transform.rotate(pygame.image.load(self.pipe_image).convert_alpha(), 180),
+			pygame.image.load(self.pipe_image).convert_alpha(),
 		)
 
 		# hismask for pipes
-		self.HITMASKS["pipe"] = (
-			self.get_hitmask(self.IMAGES["pipe"][0]),
-			self.get_hitmask(self.IMAGES["pipe"][1]),
+		self.hitmasks["pipe"] = (
+			self.get_hitmask(self.images["pipe"][0]),
+			self.get_hitmask(self.images["pipe"][1]),
 		)
 
 		# hitmask for player
-		self.HITMASKS["player"] = (
-			self.get_hitmask(self.IMAGES["player"][0]),
-			self.get_hitmask(self.IMAGES["player"][1]),
-			# self.get_hitmask(self.IMAGES["player"][2]),
+		self.hitmasks["player"] = (
+			self.get_hitmask(self.images["player"][0]),
+			self.get_hitmask(self.images["player"][1]),
+			# self.get_hitmask(self.images["player"][2]),
 		)
 		while True:
 			movementInfo = self.show_welcome_animation()
@@ -112,15 +113,15 @@ class Tippy(object):
 		# iterator used to change playerIndex after every 5th iteration
 		loopIter = 0
 
-		playerx = int(self.SCREENWIDTH * 0.2)
-		playery = int((self.SCREENHEIGHT - self.IMAGES["player"][0].get_height()) / 2)
+		playerx = int(self.screenwidth * 0.2)
+		playery = int((self.screenheight - self.images["player"][0].get_height()) / 2)
 
-		messagex = int((self.SCREENWIDTH - self.IMAGES["message"].get_width()) / 2)
-		messagey = int(self.SCREENHEIGHT * 0.12)
+		messagex = int((self.screenwidth - self.images["message"].get_width()) / 2)
+		messagey = int(self.screenheight * 0.12)
 
 		basex = 0
 		# amount by which base can maximum shift to left
-		baseShift = self.IMAGES["base"].get_width() - self.IMAGES["background"].get_width()
+		baseShift = self.images["base"].get_width() - self.images["background"].get_width()
 
 		# player shm for up-down motion on welcome screen
 		playerShmVals = {"val": 0, "dir": 1}
@@ -130,9 +131,9 @@ class Tippy(object):
 				if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
 					pygame.quit()
 					sys.exit()
-				if event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
+				if (event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP)):
 					# make first flap sound and return values for run_main_game
-					self.SOUNDS["wing"].play()
+					self.sounds["wing"].play()
 					return {
 						"playery": playery + playerShmVals["val"],
 						"basex": basex,
@@ -147,21 +148,21 @@ class Tippy(object):
 			self.player_shm(playerShmVals)
 
 			# draw sprites
-			self.SCREEN.blit(self.IMAGES["background"], (0,0))
-			self.SCREEN.blit(self.IMAGES["player"][playerIndex], (playerx, playery + playerShmVals["val"]))
-			self.SCREEN.blit(self.IMAGES["message"], (messagex, messagey))
-			self.SCREEN.blit(self.IMAGES["base"], (basex, self.BASEY))
+			self.screen.blit(self.images["background"], (0,0))
+			self.screen.blit(self.images["player"][playerIndex], (playerx, playery + playerShmVals["val"]))
+			self.screen.blit(self.images["message"], (messagex, messagey))
+			self.screen.blit(self.images["base"], (basex, self.basey))
 
 			pygame.display.update()
-			self.FPSCLOCK.tick(self.FPS)
+			self.fpsclock.tick(self.fps)
 
 	def run_main_game(self, movementInfo):
 		score = playerIndex = loopIter = 0
 		playerIndexGen = movementInfo["playerIndexGen"]
-		playerx, playery = int(self.SCREENWIDTH * 0.2), movementInfo["playery"]
+		playerx, playery = int(self.screenwidth * 0.2), movementInfo["playery"]
 
 		basex = movementInfo["basex"]
-		baseShift = self.IMAGES["base"].get_width() - self.IMAGES["background"].get_width()
+		baseShift = self.images["base"].get_width() - self.images["background"].get_width()
 
 		# get 2 new pipes to add to upperPipes lowerPipes list
 		newPipe1 = self.get_random_pipe()
@@ -169,14 +170,14 @@ class Tippy(object):
 
 		# list of upper pipes
 		upperPipes = [
-			{"x": self.SCREENWIDTH + 200, "y": newPipe1[0]["y"]},
-			{"x": self.SCREENWIDTH + 200 + (self.SCREENWIDTH / 2), "y": newPipe2[0]["y"]},
+			{"x": self.screenwidth + 200, "y": newPipe1[0]["y"]},
+			{"x": self.screenwidth + 200 + (self.screenwidth / 2), "y": newPipe2[0]["y"]},
 		]
 
 		# list of lowerpipe
 		lowerPipes = [
-			{"x": self.SCREENWIDTH + 200, "y": newPipe1[1]["y"]},
-			{"x": self.SCREENWIDTH + 200 + (self.SCREENWIDTH / 2), "y": newPipe2[1]["y"]},
+			{"x": self.screenwidth + 200, "y": newPipe1[1]["y"]},
+			{"x": self.screenwidth + 200 + (self.screenwidth / 2), "y": newPipe2[1]["y"]},
 		]
 
 		pipeVelX = -4
@@ -190,37 +191,42 @@ class Tippy(object):
 		playerFlapped = False # True when player flaps
 
 		while True:
+			rl_action = self.action
+			rl_reward = 0
 			for event in pygame.event.get():
 				if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
 					pygame.quit()
 					sys.exit()
-				if event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
-					if playery > -2 * self.IMAGES["player"][0].get_height():
+				if (event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP)) or self.action == ACTION_TAP:
+					if playery > -2 * self.images["player"][0].get_height():
 						playerVelY = playerFlapAcc
 						playerFlapped = True
-						self.SOUNDS["wing"].play()
+						self.sounds["wing"].play()
 
 			# check for crash here
-			crashTest = self.check_crash({"x": playerx, "y": playery, "index": playerIndex},
-								   upperPipes, lowerPipes)
+			crashTest = self.check_crash({"x": playerx, "y": playery, "index": playerIndex}, upperPipes, lowerPipes)
 			if crashTest[0]:
-				return {
-					"y": playery,
-					"groundCrash": crashTest[1],
-					"basex": basex,
-					"upperPipes": upperPipes,
-					"lowerPipes": lowerPipes,
-					"score": score,
-					"playerVelY": playerVelY,
-				}
+				rl_reward = -1
+				if self.train == False:
+					self.agent_end(rl_action, rl_reward)
+					return {
+						"y": playery,
+						"groundCrash": crashTest[1],
+						"basex": basex,
+						"upperPipes": upperPipes,
+						"lowerPipes": lowerPipes,
+						"score": score,
+						"playerVelY": playerVelY,
+					}
 
 			# check for score
-			playerMidPos = playerx + self.IMAGES["player"][0].get_width() / 2
+			playerMidPos = playerx + self.images["player"][0].get_width() / 2
 			for pipe in upperPipes:
-				pipeMidPos = pipe["x"] + self.IMAGES["pipe"][0].get_width() / 2
+				pipeMidPos = pipe["x"] + self.images["pipe"][0].get_width() / 2
 				if pipeMidPos <= playerMidPos < pipeMidPos + 4:
 					score += 1
-					self.SOUNDS["point"].play()
+					self.sounds["point"].play()
+					rl_reward = 1
 
 			# playerIndex basex change
 			if (loopIter + 1) % 3 == 0:
@@ -233,8 +239,8 @@ class Tippy(object):
 				playerVelY += playerAccY
 			if playerFlapped:
 				playerFlapped = False
-			playerHeight = self.IMAGES["player"][playerIndex].get_height()
-			playery += min(playerVelY, self.BASEY - playery - playerHeight)
+			playerHeight = self.images["player"][playerIndex].get_height()
+			playery += min(playerVelY, self.basey - playery - playerHeight)
 
 			# move pipes to left
 			for uPipe, lPipe in zip(upperPipes, lowerPipes):
@@ -248,41 +254,49 @@ class Tippy(object):
 				lowerPipes.append(newPipe[1])
 
 			# remove first pipe if its out of the screen
-			if upperPipes[0]["x"] < -self.IMAGES["pipe"][0].get_width():
+			if upperPipes[0]["x"] < -self.images["pipe"][0].get_width():
 				upperPipes.pop(0)
 				lowerPipes.pop(0)
 
 			# draw sprites
-			self.SCREEN.blit(self.IMAGES["background"], (0,0))
+			self.screen.blit(self.images["background"], (0,0))
 
 			for uPipe, lPipe in zip(upperPipes, lowerPipes):
-				self.SCREEN.blit(self.IMAGES["pipe"][0], (uPipe["x"], uPipe["y"]))
-				self.SCREEN.blit(self.IMAGES["pipe"][1], (lPipe["x"], lPipe["y"]))
+				self.screen.blit(self.images["pipe"][0], (uPipe["x"], uPipe["y"]))
+				self.screen.blit(self.images["pipe"][1], (lPipe["x"], lPipe["y"]))
 
-			self.SCREEN.blit(self.IMAGES["base"], (basex, self.BASEY))
+			self.screen.blit(self.images["base"], (basex, self.basey))
 			# print score so player overlaps the score
 			self.show_score(score)
-			self.SCREEN.blit(self.IMAGES["player"][playerIndex], (playerx, playery))
+			self.screen.blit(self.images["player"][playerIndex], (playerx, playery))
 
 			pygame.display.update()
-			self.FPSCLOCK.tick(self.FPS)
+			self.fpsclock.tick(self.fps)
 
-
-			buf = self.SCREEN.get_buffer()
-			image = Image.frombytes("RGBA",self.SCREEN.get_size(),buf.raw)
+			# capture screen
+			buf = self.screen.get_buffer()
+			image = Image.frombytes("RGBA",self.screen.get_size(),buf.raw)
 			del buf
-			pixel = np.asarray(image, dtype=np.uint8)
-			pixel = 0.2126 * pixel[..., 2] + 0.7152 * pixel[..., 1] + 0.0722 * pixel[..., 0]
-			pixel = scipy.misc.imresize(pixel, size=(96, 72), interp="bilinear")
-			pixel = pixel[0:72, 0:72]
-			# Image.fromarray(pixel).convert("RGB").save("screen.bmp")
+			rl_next_frame = np.asarray(image, dtype=np.uint8)
+			rl_next_frame = 0.2126 * rl_next_frame[..., 2] + 0.7152 * rl_next_frame[..., 1] + 0.0722 * rl_next_frame[..., 0]
+			rl_next_frame = scipy.misc.imresize(rl_next_frame, size=(96, 72), interp="bilinear")
+			rl_next_frame = rl_next_frame[0:72, 0:72]
+			# Image.fromarray(rl_next_frame).convert("RGB").save("screen.bmp")
+
+			self.agent_step(rl_action, rl_reward, rl_next_frame, score)
+
+	def agent_step(self, action, reward, next_frame, score):
+		raise NotImplementedError()
+
+	def agent_end(self, action, reward, score):
+		raise NotImplementedError()
 
 	def show_game_over_screen(self, crashInfo):
 		"""crashes the player down ans shows gameover image"""
 		score = crashInfo["score"]
-		playerx = self.SCREENWIDTH * 0.2
+		playerx = self.screenwidth * 0.2
 		playery = crashInfo["y"]
-		playerHeight = self.IMAGES["player"][0].get_height()
+		playerHeight = self.images["player"][0].get_height()
 		playerVelY = crashInfo["playerVelY"]
 		playerAccY = 2
 
@@ -291,9 +305,9 @@ class Tippy(object):
 		upperPipes, lowerPipes = crashInfo["upperPipes"], crashInfo["lowerPipes"]
 
 		# play hit and die sounds
-		self.SOUNDS["hit"].play()
+		self.sounds["hit"].play()
 		if not crashInfo["groundCrash"]:
-			self.SOUNDS["die"].play()
+			self.sounds["die"].play()
 
 		while True:
 			for event in pygame.event.get():
@@ -301,29 +315,29 @@ class Tippy(object):
 					pygame.quit()
 					sys.exit()
 				if event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
-					if playery + playerHeight >= self.BASEY - 1:
+					if playery + playerHeight >= self.basey - 1:
 						return
 
 			# player y shift
-			if playery + playerHeight < self.BASEY - 1:
-				playery += min(playerVelY, self.BASEY - playery - playerHeight)
+			if playery + playerHeight < self.basey - 1:
+				playery += min(playerVelY, self.basey - playery - playerHeight)
 
 			# player velocity change
 			if playerVelY < 15:
 				playerVelY += playerAccY
 
 			# draw sprites
-			self.SCREEN.blit(self.IMAGES["background"], (0,0))
+			self.screen.blit(self.images["background"], (0,0))
 
 			for uPipe, lPipe in zip(upperPipes, lowerPipes):
-				self.SCREEN.blit(self.IMAGES["pipe"][0], (uPipe["x"], uPipe["y"]))
-				self.SCREEN.blit(self.IMAGES["pipe"][1], (lPipe["x"], lPipe["y"]))
+				self.screen.blit(self.images["pipe"][0], (uPipe["x"], uPipe["y"]))
+				self.screen.blit(self.images["pipe"][1], (lPipe["x"], lPipe["y"]))
 
-			self.SCREEN.blit(self.IMAGES["base"], (basex, self.BASEY))
+			self.screen.blit(self.images["base"], (basex, self.basey))
 			self.show_score(score)
-			self.SCREEN.blit(self.IMAGES["player"][1], (playerx,playery))
+			self.screen.blit(self.images["player"][1], (playerx,playery))
 
-			self.FPSCLOCK.tick(self.FPS)
+			self.fpsclock.tick(self.fps)
 			pygame.display.update()
 
 	def player_shm(self, playerShm):
@@ -339,14 +353,14 @@ class Tippy(object):
 	def get_random_pipe(self):
 		"""returns a randomly generated pipe"""
 		# y of gap between upper and lower pipe
-		gapY = random.randrange(0, int(self.BASEY * 0.6 - self.PIPEGAPSIZE))
-		gapY += int(self.BASEY * 0.2)
-		pipeHeight = self.IMAGES["pipe"][0].get_height()
-		pipeX = self.SCREENWIDTH + 10
+		gapY = random.randrange(0, int(self.basey * 0.6 - self.pipegapsize))
+		gapY += int(self.basey * 0.2)
+		pipeHeight = self.images["pipe"][0].get_height()
+		pipeX = self.screenwidth + 10
 
 		return [
 			{"x": pipeX, "y": gapY - pipeHeight},  # upper pipe
-			{"x": pipeX, "y": gapY + self.PIPEGAPSIZE}, # lower pipe
+			{"x": pipeX, "y": gapY + self.pipegapsize}, # lower pipe
 		]
 
 	def show_score(self, score):
@@ -355,28 +369,28 @@ class Tippy(object):
 		totalWidth = 0 # total width of all numbers to be printed
 
 		for digit in scoreDigits:
-			totalWidth += self.IMAGES["numbers"][digit].get_width()
+			totalWidth += self.images["numbers"][digit].get_width()
 
-		Xoffset = (self.SCREENWIDTH - totalWidth) / 2
+		Xoffset = (self.screenwidth - totalWidth) / 2
 
 		for digit in scoreDigits:
-			self.SCREEN.blit(self.IMAGES["numbers"][digit], (Xoffset, self.SCREENHEIGHT * 0.1))
-			Xoffset += self.IMAGES["numbers"][digit].get_width()
+			self.screen.blit(self.images["numbers"][digit], (Xoffset, self.screenheight * 0.1))
+			Xoffset += self.images["numbers"][digit].get_width()
 
 	def check_crash(self, player, upperPipes, lowerPipes):
 		"""returns True if player collders with base or pipes."""
 		pi = player["index"]
-		player["w"] = self.IMAGES["player"][0].get_width()
-		player["h"] = self.IMAGES["player"][0].get_height()
+		player["w"] = self.images["player"][0].get_width()
+		player["h"] = self.images["player"][0].get_height()
 
 		# if player crashes into ground
-		if player["y"] + player["h"] >= self.BASEY - 1:
+		if player["y"] + player["h"] >= self.basey - 1:
 			return [True, True]
 		else:
 
 			playerRect = pygame.Rect(player["x"], player["y"], player["w"], player["h"])
-			pipeW = self.IMAGES["pipe"][0].get_width()
-			pipeH = self.IMAGES["pipe"][0].get_height()
+			pipeW = self.images["pipe"][0].get_width()
+			pipeH = self.images["pipe"][0].get_height()
 
 			for uPipe, lPipe in zip(upperPipes, lowerPipes):
 				# upper and lower pipe rects
@@ -384,9 +398,9 @@ class Tippy(object):
 				lPipeRect = pygame.Rect(lPipe["x"], lPipe["y"], pipeW, pipeH)
 
 				# player and upper/lower pipe hitmasks
-				pHitMask = self.HITMASKS["player"][pi]
-				uHitmask = self.HITMASKS["pipe"][0]
-				lHitmask = self.HITMASKS["pipe"][1]
+				pHitMask = self.hitmasks["player"][pi]
+				uHitmask = self.hitmasks["pipe"][0]
+				lHitmask = self.hitmasks["pipe"][1]
 
 				# if bird collided with upipe or lpipe
 				uCollide = self.pixel_collision(playerRect, uPipeRect, pHitMask, uHitmask)
