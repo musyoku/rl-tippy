@@ -4,7 +4,7 @@ import sys, os, chainer
 import numpy as np
 from datetime import datetime
 from model import Model, Config
-from chainer import functions
+from chainer import functions, Variable
 sys.path.append(os.path.join("..", "..", ".."))
 from rl.playground.tippy import TippyAgent, OBSERVATION_WIDTH, OBSERVATION_HEIGHT, ACTION_NO_OP, ACTION_JUMP
 from rl.utils.args import args
@@ -86,23 +86,27 @@ class Trainer(TippyAgent):
 			self.update_model_parameters()
 
 		if self.total_time_step % self.target_update_frequency == 0:
-			printr("target updated.")
+			printr("")
+			print("target updated.")
 			self.dqn.update_target()
 
 	# エピソード終了
 	def agent_end(self, state, action, reward, score):
 		self.store_transition_in_replay_memory(state, action, reward, episode_ends=True)
 		self.total_time_step += 1
+		self.current_episode += 1
+		self.time_step_for_episode = 0
 
 		self.last_state = np.roll(self.last_state, 1, axis=0)
 		self.last_state[0] = state
 		self.max_score = max(score, self.max_score)
 
+		if self.total_time_step < self.replay_start_time:
+			return
+			
 		if self.total_time_step > self.batchsize and self.total_time_step % 10 == 0:
 			self.update_model_parameters()
 
-		self.current_episode += 1
-		self.time_step_for_episode = 0
 
 	def store_transition_in_replay_memory(self, state, action, reward, episode_ends=False):
 		self.replay_frames[self.ptr] = state
@@ -148,7 +152,7 @@ class Trainer(TippyAgent):
 		max_target_q_data = self.dqn.compute_target_q_value(next_state).data
 		max_target_q_data = xp.amax(max_target_q_data, axis=1)
 
-		target = q.data.copy()
+		target_data = q.data.copy()
 
 		for batch_idx in range(batchsize):
 			if episode_ends[batch_idx] is True:
@@ -156,16 +160,11 @@ class Trainer(TippyAgent):
 			else:
 				new_target_value = np.sign(reward[batch_idx]) + self.discount_factor * max_target_q_data[batch_idx]
 			action_idx = action[batch_idx]
-			old_target_value = target[batch_idx, action_idx]
-			diff = new_target_value - old_target_value
-			# 1を超えるものはすべて1にする。（-1も同様）
-			if diff > 1.0:
-				new_target_value = 1.0 + old_target_value	
-			elif diff < -1.0:
-				new_target_value = -1.0 + old_target_value	
-			target[batch_idx, action_idx] = new_target_value
+			target_data[batch_idx, action_idx] = new_target_value
 
-		loss = functions.mean_squared_error(target, q)
+		target = Variable(target_data)
+		loss = functions.clip((target - q) ** 2, 0.0, 1.0)	# clip loss
+		loss = functions.sum(loss)
 
 		# check NaN
 		loss_value = float(loss.data)

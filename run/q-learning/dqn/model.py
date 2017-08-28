@@ -18,7 +18,7 @@ class Config():
 		self.final_exploration_rate =	0.1
 		self.final_exploration_frame = 	10 ** 6
 		self.no_op_max = 				30
-		self.grad_clip =				1	
+		self.grad_clip =				0	
 		self.weight_decay =				1e-6	
 		self.initial_learning_rate =	0.001	
 		self.lr_decay =					1	
