@@ -130,6 +130,8 @@ class TippyAgent(object):
 		frame = 0.2126 * frame[..., 2] + 0.7152 * frame[..., 1] + 0.0722 * frame[..., 0]
 		frame = scipy.misc.imresize(frame, size=(96, 72), interp="bilinear")
 		frame = frame[0:72, 0:72]
+		frame = frame.astype(np.float32) / 255
+		frame = (frame - 0.5) * 2
 		return frame
 
 	def show_welcome_animation(self):
@@ -311,13 +313,7 @@ class TippyAgent(object):
 			self.fpsclock.tick(self.fps)
 
 			# capture screen
-			buf = self.screen.get_buffer()
-			image = Image.frombytes("RGBA",self.screen.get_size(),buf.raw)
-			del buf
-			rl_next_frame = np.asarray(image, dtype=np.uint8)
-			rl_next_frame = 0.2126 * rl_next_frame[..., 2] + 0.7152 * rl_next_frame[..., 1] + 0.0722 * rl_next_frame[..., 0]
-			rl_next_frame = scipy.misc.imresize(rl_next_frame, size=(96, 72), interp="bilinear")
-			rl_next_frame = rl_next_frame[0:72, 0:72]
+			rl_next_frame = self.capture_screen()
 			# Image.fromarray(rl_next_frame).convert("RGB").save("screen.bmp")
 
 			if self.rl_prev_frame is not None:
@@ -429,8 +425,9 @@ class TippyAgent(object):
 		# if player crashes into ground
 		if player["y"] + player["h"] >= self.basey - 1:
 			return [True, True]
+		elif player["y"] + player["h"] <= 10:
+			return [True, True]
 		else:
-
 			playerRect = pygame.Rect(player["x"], player["y"], player["w"], player["h"])
 			pipeW = self.images["pipe"][0].get_width()
 			pipeH = self.images["pipe"][0].get_height()

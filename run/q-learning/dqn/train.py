@@ -1,3 +1,4 @@
+from __future__ import division
 from __future__ import print_function
 import sys, os, chainer
 import numpy as np
@@ -25,6 +26,7 @@ class Trainer(TippyAgent):
 		self.initial_exploration_rate = conf.initial_exploration_rate
 		self.exploration_rate = conf.initial_exploration_rate
 		self.final_exploration_rate = conf.final_exploration_rate
+		self.final_exploration_frame = conf.final_exploration_frame
 		self.discount_factor = conf.discount_factor
 		self.target_update_frequency = conf.target_update_frequency
 
@@ -42,6 +44,9 @@ class Trainer(TippyAgent):
 		self.policy_frozen = False
 		self.avg_loss = 0
 		self.last_loss = 0
+		self.max_score = 0
+
+		self.pipegapsize = 200
 
 		self.last_state = np.zeros((self.agent_history_length, OBSERVATION_HEIGHT, OBSERVATION_WIDTH), dtype=np.float32)
 
@@ -63,11 +68,13 @@ class Trainer(TippyAgent):
 
 		self.last_state = np.roll(self.last_state, 1, axis=0)
 		self.last_state[0] = state
+		self.max_score = max(score, self.max_score)
 
-		printr("episode {} - step {} - total {} - memory size {}/{} - loss {}".format(
+		printr("episode {} - step {} - total {} - eps {:.3f} - memory size {}/{} - best score {} - loss {:.3e}".format(
 			self.current_episode, self.time_step_for_episode, self.total_time_step, 
+			self.exploration_rate,
 			min(self.ptr, self.replay_memory_size), self.replay_memory_size, 
-			self.last_loss))
+			self.max_score, self.last_loss))
 
 		if self.total_time_step < self.replay_start_time:
 			self.exploration_rate = self.initial_exploration_rate # ランダムに行動してreplay memoryを増やしていく
@@ -79,7 +86,7 @@ class Trainer(TippyAgent):
 			self.update_model_parameters()
 
 		if self.total_time_step % self.target_update_frequency == 0:
-			print("target updated.")
+			printr("target updated.")
 			self.dqn.update_target()
 
 	# エピソード終了
@@ -89,6 +96,7 @@ class Trainer(TippyAgent):
 
 		self.last_state = np.roll(self.last_state, 1, axis=0)
 		self.last_state[0] = state
+		self.max_score = max(score, self.max_score)
 
 		if self.total_time_step > self.batchsize and self.total_time_step % 10 == 0:
 			self.update_model_parameters()
@@ -124,6 +132,7 @@ class Trainer(TippyAgent):
 				next_state[batch_idx] = self.replay_frames[start + 1:memory_idx + 1]
 
 			loss = self.compute_loss(state, action, reward, next_state, episode_ends)
+
 			self.optimizer.update(lossfun=lambda: loss)
 			self.avg_loss += float(loss.data)
 
@@ -135,7 +144,7 @@ class Trainer(TippyAgent):
 		xp = self.dqn.model.xp
 		batchsize = state.shape[0]
 
-		q = self.dqn.compute_q_value(state)
+		q = self.dqn.compute_q_value(state, train=True)
 		max_target_q_data = self.dqn.compute_target_q_value(next_state).data
 		max_target_q_data = xp.amax(max_target_q_data, axis=1)
 
@@ -156,11 +165,18 @@ class Trainer(TippyAgent):
 				new_target_value = -1.0 + old_target_value	
 			target[batch_idx, action_idx] = new_target_value
 
-		return functions.mean_squared_error(target, q)
+		loss = functions.mean_squared_error(target, q)
+
+		# check NaN
+		loss_value = float(loss.data)
+		if loss_value != loss_value:
+			import pdb
+			pdb.set_trace()
+		return loss
 			
 	# Exploration rate is linearly annealed to its final value
 	def decrease_exploration_rate(self):
-		self.exploration_rate -= 1.0 / self.final_exploration_rate
+		self.exploration_rate -= 1.0 / self.final_exploration_frame
 		if self.exploration_rate < self.final_exploration_rate:
 			self.exploration_rate = self.final_exploration_rate
 
