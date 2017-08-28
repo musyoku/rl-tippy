@@ -46,7 +46,7 @@ class Trainer(TippyAgent):
 		self.last_loss = 0
 		self.max_score = 0
 
-		self.pipegapsize = 200
+		self.set_pipegapsize(200)
 
 		self.last_state = np.zeros((self.agent_history_length, OBSERVATION_HEIGHT, OBSERVATION_WIDTH), dtype=np.float32)
 

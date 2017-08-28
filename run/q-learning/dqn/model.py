@@ -13,6 +13,8 @@ class Config():
 		self.replay_memory_size = 		10 ** 5
 		self.replay_start_size = 		10 ** 4
 		self.target_update_frequency =	10 ** 4
+		self.eval_frequency =			10 ** 4
+		self.eval_num_runs = 			10
 		self.discount_factor = 			0.99
 		self.initial_exploration_rate =	1.0
 		self.final_exploration_rate =	0.1
