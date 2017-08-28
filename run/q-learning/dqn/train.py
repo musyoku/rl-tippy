@@ -101,12 +101,14 @@ class Trainer(TippyAgent):
 		self.last_state[0] = state
 		self.max_score = max(score, self.max_score)
 
+		if self.current_episode % 100 == 0:
+			self.dqn.save(os.path.join(args.sandbox, "model.hdf5"))
+
 		if self.total_time_step < self.replay_start_time:
 			return
 			
 		if self.total_time_step > self.batchsize and self.total_time_step % 10 == 0:
 			self.update_model_parameters()
-
 
 	def store_transition_in_replay_memory(self, state, action, reward, episode_ends=False):
 		self.replay_frames[self.ptr] = state
@@ -190,6 +192,7 @@ def setup_optimizer(model):
 
 def run_training_loop():
 	dqn = Model()
+	dqn.load(os.path.join(args.sandbox, "model.hdf5"))
 	if args.gpu_device != -1:
 		dqn.to_gpu(args.gpu_device)
 	optimizer = setup_optimizer(dqn.model)

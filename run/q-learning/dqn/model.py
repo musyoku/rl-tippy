@@ -1,7 +1,7 @@
 import sys, os, copy
 import numpy as np
 import chainer
-from chainer import Variable, cuda
+from chainer import Variable, cuda, serializers
 sys.path.append(os.path.join("..", "..", ".."))
 from rl.playground.tippy import ACTION_NO_OP, ACTION_JUMP
 import rl.utils.stream as nn
@@ -88,14 +88,12 @@ class Model():
 				state = cuda.to_gpu(state, device=self.gpu_device)
 			return self.target(state)
 
-	def save(self):
-		filename = "model.hdf5"
+	def save(self, filename):
 		if os.path.isfile(filename):
 			os.remove(filename)
 		serializers.save_hdf5(filename, self.model)
 
-	def load(self):
-		filename = "/model.hdf5"
+	def load(self, filename):
 		if os.path.isfile(filename):
 			print("loading {} ...".format(filename))
 			serializers.load_hdf5(filename, self.model)
