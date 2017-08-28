@@ -121,9 +121,11 @@ class Trainer(TippyAgent):
 			if self.current_episode % self.eval_frequency == 0:
 				self.toggle_eval_mode()
 		else:
-			pass
+			self.eval_current_episode += 1
+			if self.eval_current_episode % self.eval_num_runs == 0:
+				self.toggle_eval_mode()
 
-	def toggle_eval_mode():
+	def toggle_eval_mode(self):
 		if self.train:
 			self.train = False
 			self.eval_current_episode = 0
