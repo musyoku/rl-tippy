@@ -9,7 +9,7 @@ import rl.utils.stream as nn
 class Config():
 	def __init__(self):
 		self.agent_history_length = 	4
-		self.agent_action_frequency = 	4
+		self.agent_action_frequency = 	8
 		self.replay_memory_size = 		10 ** 5
 		self.replay_start_size = 		10 ** 4
 		self.target_update_frequency =	10 ** 4

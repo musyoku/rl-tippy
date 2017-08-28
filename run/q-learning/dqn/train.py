@@ -48,6 +48,8 @@ class Trainer(TippyAgent):
 
 		self.set_pipegapsize(200)
 
+		self.train = True
+
 		self.last_state = np.zeros((self.agent_history_length, OBSERVATION_HEIGHT, OBSERVATION_WIDTH), dtype=np.float32)
 
 	# 行動を返す
