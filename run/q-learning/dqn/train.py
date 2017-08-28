@@ -20,15 +20,14 @@ class Trainer(TippyAgent):
 		self.replay_memory_size = len(replay_frames)
 		self.batchsize = conf.batchsize
 
-		self.agent_history_length = conf.agent_history_length
-		self.agent_action_frequency = conf.agent_action_frequency
+		for key in dir(conf):
+			if key.startswith("rl_"):
+				setattr(self, key.replace("rl_", ""), getattr(conf, key))
 
-		self.initial_exploration_rate = conf.initial_exploration_rate
-		self.exploration_rate = conf.initial_exploration_rate
-		self.final_exploration_rate = conf.final_exploration_rate
-		self.final_exploration_frame = conf.final_exploration_frame
-		self.discount_factor = conf.discount_factor
-		self.target_update_frequency = conf.target_update_frequency
+		self.exploration_rate = self.initial_exploration_rate
+		self.replay_start_time = self.replay_start_size
+
+		print(self.exploration_rate)
 
 		# replay memory
 		self.replay_frames = replay_frames
@@ -36,7 +35,6 @@ class Trainer(TippyAgent):
 		self.replay_rewards = np.zeros((self.replay_memory_size,), dtype=np.int8)
 		self.replay_episode_ends = np.zeros((self.replay_memory_size,), dtype=np.bool)
 
-		self.replay_start_time = conf.replay_start_size
 		self.ptr = 0
 		self.current_episode = 1
 		self.time_step_for_episode = 0
@@ -46,9 +44,10 @@ class Trainer(TippyAgent):
 		self.last_loss = 0
 		self.max_score = 0
 
-		self.set_pipegapsize(200)
-
 		self.train = True
+		self.eval_current_episode = 1
+
+		self.set_pipegapsize(200)
 
 		self.last_state = np.zeros((self.agent_history_length, OBSERVATION_HEIGHT, OBSERVATION_WIDTH), dtype=np.float32)
 
@@ -56,61 +55,80 @@ class Trainer(TippyAgent):
 	def agent_action(self):
 		action = ACTION_NO_OP
 
-		# 毎フレームで行動が切り替わるのは不自然なのでagent_update_frequencyごとに探索
-		if self.total_time_step > self.agent_history_length and self.total_time_step % self.agent_action_frequency == 0:
-			action, q_max, q_min = self.dqn.eps_greedy(self.last_state[None, :], self.exploration_rate)
+		if self.train:
+			# 毎フレームで行動が切り替わるのは不自然なのでagent_update_frequencyごとに探索
+			if self.total_time_step > self.agent_history_length and self.total_time_step % self.agent_action_interval == 0:
+				action, q_max, q_min = self.dqn.eps_greedy(self.last_state[None, :], self.exploration_rate)
+		else:
+			action, q_max, q_min = self.dqn.eps_greedy(self.last_state[None, :], 0)
 
 		return action
 
 	# 行動した結果を観測
 	def agent_observe(self, state, action, reward, next_frame, score, remaining_lives):
-		self.store_transition_in_replay_memory(state, action, reward)
-		self.total_time_step += 1
-		self.time_step_for_episode += 1
+		if self.train:
+			self.store_transition_in_replay_memory(state, action, reward)
+			self.total_time_step += 1
+			self.time_step_for_episode += 1
 
-		self.last_state = np.roll(self.last_state, 1, axis=0)
-		self.last_state[0] = state
-		self.max_score = max(score, self.max_score)
+			self.last_state = np.roll(self.last_state, 1, axis=0)
+			self.last_state[0] = state
+			self.max_score = max(score, self.max_score)
 
-		printr("episode {} - step {} - total {} - eps {:.3f} - memory size {}/{} - best score {} - loss {:.3e}".format(
-			self.current_episode, self.time_step_for_episode, self.total_time_step, 
-			self.exploration_rate,
-			min(self.ptr, self.replay_memory_size), self.replay_memory_size, 
-			self.max_score, self.last_loss))
+			printr("episode {} - step {} - total {} - eps {:.3f} - memory size {}/{} - best score {} - loss {:.3e}".format(
+				self.current_episode, self.time_step_for_episode, self.total_time_step, 
+				self.exploration_rate,
+				min(self.ptr, self.replay_memory_size), self.replay_memory_size, 
+				self.max_score, self.last_loss))
 
-		if self.total_time_step < self.replay_start_time:
-			self.exploration_rate = self.initial_exploration_rate # ランダムに行動してreplay memoryを増やしていく
-			return
+			if self.total_time_step < self.replay_start_time:
+				self.exploration_rate = self.initial_exploration_rate # ランダムに行動してreplay memoryを増やしていく
+				return
 
-		self.decrease_exploration_rate()
+			self.decrease_exploration_rate()
 
-		if self.total_time_step > self.batchsize and self.total_time_step % 10 == 0:
-			self.update_model_parameters()
+			if self.total_time_step > self.batchsize and self.total_time_step % 10 == 0:
+				self.update_model_parameters()
 
-		if self.total_time_step % self.target_update_frequency == 0:
-			printr("")
-			print("target updated.")
-			self.dqn.update_target()
+			if self.total_time_step % self.target_update_frequency == 0:
+				printr("")
+				print("target updated.")
+				self.dqn.update_target()
+		else:
+			pass
 
 	# エピソード終了
 	def agent_end(self, state, action, reward, score):
-		self.store_transition_in_replay_memory(state, action, reward, episode_ends=True)
-		self.total_time_step += 1
-		self.current_episode += 1
-		self.time_step_for_episode = 0
+		if self.train:
+			self.store_transition_in_replay_memory(state, action, reward, episode_ends=True)
+			self.total_time_step += 1
+			self.current_episode += 1
+			self.time_step_for_episode = 0
 
-		self.last_state = np.roll(self.last_state, 1, axis=0)
-		self.last_state[0] = state
-		self.max_score = max(score, self.max_score)
+			self.last_state = np.roll(self.last_state, 1, axis=0)
+			self.last_state[0] = state
+			self.max_score = max(score, self.max_score)
 
-		if self.current_episode % 100 == 0:
-			self.dqn.save(os.path.join(args.sandbox, "model.hdf5"))
+			if self.current_episode % 100 == 0:
+				self.dqn.save(os.path.join(args.sandbox, "model.hdf5"))
 
-		if self.total_time_step < self.replay_start_time:
-			return
-			
-		if self.total_time_step > self.batchsize and self.total_time_step % 10 == 0:
-			self.update_model_parameters()
+			if self.total_time_step < self.replay_start_time:
+				return
+				
+			if self.total_time_step > self.batchsize and self.total_time_step % 10 == 0:
+				self.update_model_parameters()
+
+			if self.current_episode % self.eval_frequency == 0:
+				self.toggle_eval_mode()
+		else:
+			pass
+
+	def toggle_eval_mode():
+		if self.train:
+			self.train = False
+			self.eval_current_episode = 0
+		else:
+			self.train = True
 
 	def store_transition_in_replay_memory(self, state, action, reward, episode_ends=False):
 		self.replay_frames[self.ptr] = state
@@ -198,7 +216,7 @@ def run_training_loop():
 	if args.gpu_device != -1:
 		dqn.to_gpu(args.gpu_device)
 	optimizer = setup_optimizer(dqn.model)
-	replay_frames = np.zeros((conf.replay_memory_size, OBSERVATION_HEIGHT, OBSERVATION_WIDTH), dtype=np.float32)
+	replay_frames = np.zeros((conf.rl_replay_memory_size, OBSERVATION_HEIGHT, OBSERVATION_WIDTH), dtype=np.float32)
 	agent = Trainer(dqn, optimizer, replay_frames, conf)
 	agent.play()
 
