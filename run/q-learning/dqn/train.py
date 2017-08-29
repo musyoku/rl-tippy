@@ -114,14 +114,14 @@ class Trainer(TippyAgent):
 			if self.current_episode % 100 == 0:
 				self.dqn.save(os.path.join(args.sandbox, "model.hdf5"))
 
+			self.total_time_step += 1
+			if self.total_time_step < self.replay_start_time:
+				return
+				
 			if self.current_episode % self.eval_frequency == 0:
 				self.toggle_eval_mode()
 				
-			self.total_time_step += 1
 			self.current_episode += 1
-
-			if self.total_time_step < self.replay_start_time:
-				return
 
 			if self.total_time_step > self.batchsize and self.total_time_step % 10 == 0:
 				self.update_model_parameters()

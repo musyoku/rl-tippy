@@ -236,6 +236,7 @@ class TippyAgent(object):
 						# self._sounds["wing"].play()
 
 			if rl_action == ACTION_JUMP:
+				rl_reward = -0.1
 				if playery > -2 * self._images["player"][0].get_height():
 					playerVelY = playerFlapAcc
 					playerFlapped = True
