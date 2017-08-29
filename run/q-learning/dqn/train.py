@@ -24,10 +24,11 @@ class Trainer(TippyAgent):
 			if key.startswith("rl_"):
 				setattr(self, key.replace("rl_", ""), getattr(conf, key))
 
-		self.exploration_rate = self.initial_exploration_rate
+		self.exploration_rate_train = self.initial_exploration_rate
+		self.exploration_rate_eval = 0.1
 		self.replay_start_time = self.replay_start_size
 
-		print(self.exploration_rate)
+		print(self.exploration_rate_train)
 
 		# replay memory
 		self.replay_frames = replay_frames
@@ -58,31 +59,33 @@ class Trainer(TippyAgent):
 		if self.train:
 			# 毎フレームで行動が切り替わるのは不自然なのでagent_update_frequencyごとに探索
 			if self.total_time_step > self.agent_history_length and self.total_time_step % self.agent_action_interval == 0:
-				action, q_max, q_min = self.dqn.eps_greedy(self.last_state[None, :], self.exploration_rate)
+				action, q_max, q_min = self.dqn.eps_greedy(self.last_state[None, :], self.exploration_rate_train)
 		else:
-			action, q_max, q_min = self.dqn.eps_greedy(self.last_state[None, :], 0)
+			if self.total_time_step % self.agent_action_interval == 0:
+				action, q_max, q_min = self.dqn.eps_greedy(self.last_state[None, :], self.exploration_rate_eval)
 
 		return action
 
 	# 行動した結果を観測
 	def agent_observe(self, state, action, reward, next_frame, score, remaining_lives):
+		self.last_state = np.roll(self.last_state, 1, axis=0)
+		self.last_state[0] = state
+		self.max_score = max(score, self.max_score)
+
 		if self.train:
 			self.store_transition_in_replay_memory(state, action, reward)
 			self.total_time_step += 1
 			self.time_step_for_episode += 1
 
-			self.last_state = np.roll(self.last_state, 1, axis=0)
-			self.last_state[0] = state
-			self.max_score = max(score, self.max_score)
 
-			printr("episode {} - step {} - total {} - eps {:.3f} - memory size {}/{} - best score {} - loss {:.3e}".format(
+			printr("episode {} - step {} - total {} - eps {:.3f} - action {} - reward {} - memory size {}/{} - best score {} - loss {:.3e}".format(
 				self.current_episode, self.time_step_for_episode, self.total_time_step, 
-				self.exploration_rate,
+				self.exploration_rate_train, action, reward,
 				min(self.ptr, self.replay_memory_size), self.replay_memory_size, 
 				self.max_score, self.last_loss))
 
 			if self.total_time_step < self.replay_start_time:
-				self.exploration_rate = self.initial_exploration_rate # ランダムに行動してreplay memoryを増やしていく
+				self.exploration_rate_train = self.initial_exploration_rate # ランダムに行動してreplay memoryを増やしていく
 				return
 
 			self.decrease_exploration_rate()
@@ -95,14 +98,13 @@ class Trainer(TippyAgent):
 				print("target updated.")
 				self.dqn.update_target()
 		else:
-			pass
+			printr("eval {} - eps {:.3f} - action {} - reward {} - best score {}".format(
+				self.eval_current_episode, self.exploration_rate_eval, action, reward, self.max_score))
 
 	# エピソード終了
 	def agent_end(self, state, action, reward, score):
 		if self.train:
 			self.store_transition_in_replay_memory(state, action, reward, episode_ends=True)
-			self.total_time_step += 1
-			self.current_episode += 1
 			self.time_step_for_episode = 0
 
 			self.last_state = np.roll(self.last_state, 1, axis=0)
@@ -112,14 +114,17 @@ class Trainer(TippyAgent):
 			if self.current_episode % 100 == 0:
 				self.dqn.save(os.path.join(args.sandbox, "model.hdf5"))
 
-			if self.total_time_step < self.replay_start_time:
-				return
-				
-			if self.total_time_step > self.batchsize and self.total_time_step % 10 == 0:
-				self.update_model_parameters()
-
 			if self.current_episode % self.eval_frequency == 0:
 				self.toggle_eval_mode()
+				
+			self.total_time_step += 1
+			self.current_episode += 1
+
+			if self.total_time_step < self.replay_start_time:
+				return
+
+			if self.total_time_step > self.batchsize and self.total_time_step % 10 == 0:
+				self.update_model_parameters()
 		else:
 			self.eval_current_episode += 1
 			if self.eval_current_episode % self.eval_num_runs == 0:
@@ -180,9 +185,9 @@ class Trainer(TippyAgent):
 
 		for batch_idx in range(batchsize):
 			if episode_ends[batch_idx] is True:
-				new_target_value = np.sign(reward[batch_idx])
+				new_target_value = reward[batch_idx]
 			else:
-				new_target_value = np.sign(reward[batch_idx]) + self.discount_factor * max_target_q_data[batch_idx]
+				new_target_value = reward[batch_idx] + self.discount_factor * max_target_q_data[batch_idx]
 			action_idx = action[batch_idx]
 			target_data[batch_idx, action_idx] = new_target_value
 
@@ -199,9 +204,9 @@ class Trainer(TippyAgent):
 			
 	# Exploration rate is linearly annealed to its final value
 	def decrease_exploration_rate(self):
-		self.exploration_rate -= 1.0 / self.final_exploration_frame
-		if self.exploration_rate < self.final_exploration_rate:
-			self.exploration_rate = self.final_exploration_rate
+		self.exploration_rate_train -= 1.0 / self.final_exploration_frame
+		if self.exploration_rate_train < self.final_exploration_rate:
+			self.exploration_rate_train = self.final_exploration_rate
 
 def setup_optimizer(model):
 	optimizer = get_optimizer(conf.optimizer, conf.initial_learning_rate, conf.momentum)
