@@ -106,22 +106,21 @@ class Trainer(TippyAgent):
 		if self.train:
 			self.store_transition_in_replay_memory(state, action, reward, episode_ends=True)
 			self.time_step_for_episode = 0
+			self.total_time_step += 1
+			self.current_episode += 1
 
 			self.last_state = np.roll(self.last_state, 1, axis=0)
 			self.last_state[0] = state
 			self.max_score = max(score, self.max_score)
 
-			if self.current_episode % 100 == 0:
+			if (self.current_episode - 1) % 100 == 0:
 				self.dqn.save(os.path.join(args.sandbox, "model.hdf5"))
 
-			self.total_time_step += 1
 			if self.total_time_step < self.replay_start_time:
 				return
 				
-			if self.current_episode % self.eval_frequency == 0:
+			if (self.current_episode - 1) % self.eval_frequency == 0:
 				self.toggle_eval_mode()
-				
-			self.current_episode += 1
 
 			if self.total_time_step > self.batchsize and self.total_time_step % 10 == 0:
 				self.update_model_parameters()
