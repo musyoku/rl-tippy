@@ -72,10 +72,10 @@ class Trainer(TippyAgent):
 		self.last_state = np.roll(self.last_state, 1, axis=0)
 		self.last_state[0] = state
 		self.max_score = max(score, self.max_score)
+		self.total_time_step += 1
 
 		if self.train:
 			self.store_transition_in_replay_memory(state, action, reward)
-			self.total_time_step += 1
 			self.time_step_for_episode += 1
 
 
@@ -104,10 +104,10 @@ class Trainer(TippyAgent):
 
 	# エピソード終了
 	def agent_end(self, state, action, reward, score):
+		self.total_time_step += 1
 		if self.train:
 			self.store_transition_in_replay_memory(state, action, reward, episode_ends=True)
 			self.time_step_for_episode = 0
-			self.total_time_step += 1
 			self.current_episode += 1
 
 			self.last_state = np.roll(self.last_state, 1, axis=0)
