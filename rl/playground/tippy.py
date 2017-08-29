@@ -318,7 +318,7 @@ class TippyAgent(object):
 
 			# capture screen
 			rl_next_frame = self.capture_screen()
-			# Image.fromarray(rl_next_frame).convert("RGB").save("screen.bmp")
+			# Image.fromarray(((rl_next_frame + 1) / 2 * 255).astype(np.uint8)).convert("RGB").save("screen.bmp")
 
 			if self._rl_prev_frame is not None:
 				self.agent_observe(self._rl_prev_frame, rl_action, rl_reward, rl_next_frame, score, self._lives)

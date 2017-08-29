@@ -31,11 +31,19 @@ class Config():
 class Model():
 	def __init__(self, no_op_max=4):
 		self.model = nn.Stream(
-			nn.Convolution2D(None, 16, ksize=8, stride=4),
-			# nn.BatchNormalization(16),
-			nn.ReLU(),
-			nn.Convolution2D(None, 32, ksize=4, stride=2),
+			nn.Convolution2D(None, 32, ksize=8, stride=4),
+			nn.MaxPooling2D(2),
 			# nn.BatchNormalization(32),
+			nn.ReLU(),
+			nn.Convolution2D(None, 64, ksize=4, stride=2),
+			nn.MaxPooling2D(2),
+			# nn.BatchNormalization(64),
+			nn.ReLU(),
+			nn.Convolution2D(None, 64, ksize=2, stride=1),
+			nn.MaxPooling2D(2),
+			# nn.BatchNormalization(64),
+			nn.ReLU(),
+			nn.Linear(None, 256),
 			nn.ReLU(),
 			nn.Linear(None, 256),
 			nn.ReLU(),
