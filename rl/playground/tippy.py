@@ -39,6 +39,7 @@ class TippyAgent(object):
 		self._screen = None
 		self._fpsclock = None
 		self._rl_prev_frame = None
+		self._rl_reward = 0
 
 	def set_pipegapsize(self, size):
 		self._pipegapsize = size
@@ -229,7 +230,8 @@ class TippyAgent(object):
 
 		while True:
 			rl_action = self.agent_action()
-			rl_reward = 0
+			self._rl_reward += 0.001
+			rl_reward = self._rl_reward
 			for event in pygame.event.get():
 				if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
 					pygame.quit()
@@ -248,12 +250,12 @@ class TippyAgent(object):
 			# check for crash here
 			crashTest = self.check_crash({"x": playerx, "y": playery, "index": playerIndex}, upperPipes, lowerPipes)
 			if crashTest[0]:
-				rl_reward = -1
+				self._rl_reward = 0	# reset
 				self._lives -= 1
 				if self._lives < 1:
 					assert self._rl_prev_frame is not None
 					if self._rl_prev_frame is not None:
-						self.agent_end(self._rl_prev_frame, rl_action, rl_reward, score)
+						self.agent_end(self._rl_prev_frame, rl_action, -1, score)	# reward = -1
 					self.play_sound("die")
 					return {
 						"y": playery,

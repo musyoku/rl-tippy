@@ -20,6 +20,7 @@ class Trainer(TippyAgent):
 		self.optimizer = optimizer
 		self.replay_memory_size = len(replay_frames)
 		self.batchsize = conf.batchsize
+		self.clip_loss = conf.clip_loss
 
 		for key in dir(conf):
 			if key.startswith("rl_"):
@@ -79,7 +80,7 @@ class Trainer(TippyAgent):
 			self.time_step_for_episode += 1
 
 
-			printr("episode {} - step {} - total {} - eps {:.3f} - action {} - reward {} - memory size {}/{} - best score {} - loss {:.3e}".format(
+			printr("episode {} - step {} - total {} - eps {:.3f} - action {} - reward {:.3f} - memory size {}/{} - best score {} - loss {:.3e}".format(
 				self.current_episode, self.time_step_for_episode, self.total_time_step, 
 				self.exploration_rate_train, action, reward,
 				min(self.ptr, self.replay_memory_size), self.replay_memory_size, 
@@ -192,8 +193,10 @@ class Trainer(TippyAgent):
 			target_data[batch_idx, action_idx] = new_target_value
 
 		target = Variable(target_data)
-		diff = target - q
-		loss = functions.clip(diff ** 2, 0.0, 1.0) + functions.relu(abs(diff) - 1)
+		if self.clip_loss:
+			loss = functions.huber_loss(target, q, delta=1.0)
+		else:
+			loss = functions.mean_squared_error(target, q) / 2
 		loss = functions.sum(loss)
 
 		# check NaN

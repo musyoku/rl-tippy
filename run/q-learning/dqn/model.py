@@ -12,21 +12,22 @@ class Config():
 		self.rl_agent_action_interval = 	8
 		self.rl_replay_memory_size = 		10 ** 5
 		self.rl_replay_start_size = 		10 ** 4
-		self.rl_target_update_frequency =	10 ** 3
+		self.rl_target_update_frequency =	10 ** 4
 		self.rl_eval_frequency =			10 ** 2
 		self.rl_eval_num_runs = 			10
 		self.rl_discount_factor = 			0.99
-		self.rl_initial_exploration_rate =	1.0
+		self.rl_initial_exploration_rate =	0.5
 		self.rl_final_exploration_rate =	0.1
 		self.rl_final_exploration_frame = 	10 ** 6
 		self.rl_no_op_max = 				30
 		self.grad_clip =					0	
 		self.weight_decay =					1e-6	
-		self.initial_learning_rate =		0.001	
+		self.initial_learning_rate =		0.0001	
 		self.lr_decay =						1	
 		self.momentum =						0.9	
 		self.optimizer =					"adam"	
 		self.batchsize =	 				32
+		self.clip_loss =	 				True
 
 class Model():
 	def __init__(self, no_op_max=4):
