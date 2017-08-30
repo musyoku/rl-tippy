@@ -192,8 +192,8 @@ class Trainer(TippyAgent):
 			target_data[batch_idx, action_idx] = new_target_value
 
 		target = Variable(target_data)
-		loss = (target - q) ** 2
-		# loss = functions.clip(loss, 0.0, 1.0)	# clip loss
+		diff = target - q
+		loss = functions.clip(diff ** 2, 0.0, 1.0) + functions.relu(abs(diff) - 1)
 		loss = functions.sum(loss)
 
 		# check NaN
