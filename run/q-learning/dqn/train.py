@@ -91,7 +91,7 @@ class Trainer(TippyAgent):
 
 			self.decrease_exploration_rate()
 
-			if self.total_time_step > self.batchsize and self.total_time_step % 10 == 0:
+			if self.total_time_step > self.batchsize and self.total_time_step % 4 == 0:
 				self.update_model_parameters()
 
 			if self.total_time_step % self.target_update_frequency == 0:
@@ -123,7 +123,7 @@ class Trainer(TippyAgent):
 			if (self.current_episode - 1) % self.eval_frequency == 0:
 				self.toggle_eval_mode()
 
-			if self.total_time_step > self.batchsize and self.total_time_step % 10 == 0:
+			if self.total_time_step > self.batchsize and self.total_time_step % 4 == 0:
 				self.update_model_parameters()
 		else:
 			self.eval_current_episode += 1
@@ -192,7 +192,8 @@ class Trainer(TippyAgent):
 			target_data[batch_idx, action_idx] = new_target_value
 
 		target = Variable(target_data)
-		loss = functions.clip((target - q) ** 2, 0.0, 1.0)	# clip loss
+		loss = (target - q) ** 2
+		# loss = functions.clip(loss, 0.0, 1.0)	# clip loss
 		loss = functions.sum(loss)
 
 		# check NaN

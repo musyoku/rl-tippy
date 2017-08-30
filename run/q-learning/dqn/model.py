@@ -12,7 +12,7 @@ class Config():
 		self.rl_agent_action_interval = 	8
 		self.rl_replay_memory_size = 		10 ** 5
 		self.rl_replay_start_size = 		10 ** 4
-		self.rl_target_update_frequency =	10 ** 4
+		self.rl_target_update_frequency =	10 ** 3
 		self.rl_eval_frequency =			10 ** 2
 		self.rl_eval_num_runs = 			10
 		self.rl_discount_factor = 			0.99

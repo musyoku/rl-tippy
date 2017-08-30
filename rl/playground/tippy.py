@@ -26,6 +26,7 @@ class TippyAgent(object):
 		self._images = {}
 		self._sounds = {}
 		self._hitmasks = {}
+		self._enable_sound = False
 
 		self._player_images = (
 			"../../../rl/playground/assets/sprites/tippy-upflap.png",
@@ -129,13 +130,17 @@ class TippyAgent(object):
 		buf = self._screen.get_buffer()
 		image = Image.frombytes("RGBA",self._screen.get_size(),buf.raw)
 		del buf
-		frame = np.asarray(image, dtype=np.uint8)
-		frame = 0.2126 * frame[..., 2] + 0.7152 * frame[..., 1] + 0.0722 * frame[..., 0]
+		frame = np.asarray(image, dtype=np.uint8).copy()
+		frame = 0.2126 * frame[..., 0] + 0.7152 * frame[..., 1] + 0.0722 * frame[..., 2]
 		frame = scipy.misc.imresize(frame, size=(96, 72), interp="bilinear")
 		frame = frame[0:72, 0:72]
 		frame = frame.astype(np.float32) / 255
 		frame = (frame - 0.5) * 2
 		return frame
+
+	def play_sound(self, name):
+		if self._enable_sound:
+			self._sounds[name].play()
 
 	def show_welcome_animation(self):
 		"""Shows welcome screen animation of flappy bird"""
@@ -165,7 +170,7 @@ class TippyAgent(object):
 					sys.exit()
 				if (event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP)):
 					# make first flap sound and return values for run_main_game
-					self._sounds["wing"].play()
+					self.play_sound("wing")
 					return {
 						"playery": playery + playerShmVals["val"],
 						"basex": basex,
@@ -233,14 +238,12 @@ class TippyAgent(object):
 					if playery > -2 * self._images["player"][0].get_height():
 						playerVelY = playerFlapAcc
 						playerFlapped = True
-						# self._sounds["wing"].play()
 
 			if rl_action == ACTION_JUMP:
-				rl_reward = -0.1
 				if playery > -2 * self._images["player"][0].get_height():
 					playerVelY = playerFlapAcc
 					playerFlapped = True
-					self._sounds["wing"].play()
+					self.play_sound("wing")
 
 			# check for crash here
 			crashTest = self.check_crash({"x": playerx, "y": playery, "index": playerIndex}, upperPipes, lowerPipes)
@@ -251,7 +254,7 @@ class TippyAgent(object):
 					assert self._rl_prev_frame is not None
 					if self._rl_prev_frame is not None:
 						self.agent_end(self._rl_prev_frame, rl_action, rl_reward, score)
-					self._sounds["die"].play()
+					self.play_sound("die")
 					return {
 						"y": playery,
 						"groundCrash": crashTest[1],
@@ -268,7 +271,7 @@ class TippyAgent(object):
 					pipeMidPos = pipe["x"] + self._images["pipe"][0].get_width() / 2
 					if pipeMidPos <= playerMidPos < pipeMidPos + 4:
 						score += 1
-						self._sounds["point"].play()
+						self.play_sound("point")
 						rl_reward = 1
 
 			# playerIndex basex change
@@ -348,9 +351,9 @@ class TippyAgent(object):
 		upperPipes, lowerPipes = crashInfo["upperPipes"], crashInfo["lowerPipes"]
 
 		# play hit and die sounds
-		self._sounds["hit"].play()
+		self.play_sound("hit")
 		if not crashInfo["groundCrash"]:
-			self._sounds["die"].play()
+			self.play_sound("die")
 
 		while True:
 			for event in pygame.event.get():
