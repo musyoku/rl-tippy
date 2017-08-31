@@ -38,6 +38,7 @@ class TippyAgent(object):
 
 		self._screen = None
 		self._fpsclock = None
+		self._total_frames = 0
 		self._rl_prev_frame = None
 		self._rl_reward = 0
 
@@ -133,7 +134,7 @@ class TippyAgent(object):
 		del buf
 		frame = np.asarray(image, dtype=np.uint8).copy()
 		frame = 0.2126 * frame[..., 0] + 0.7152 * frame[..., 1] + 0.0722 * frame[..., 2]
-		frame = scipy.misc.imresize(frame, size=(96, 72), interp="bilinear")
+		frame = scipy.misc.imresize(frame, size=(86, 72), interp="bilinear")
 		frame = frame[0:72, 0:72]
 		frame = frame.astype(np.float32) / 255
 		frame = (frame - 0.5) * 2
@@ -229,6 +230,7 @@ class TippyAgent(object):
 		playerFlapped = False # True when player flaps
 
 		while True:
+			self._total_frames += 1
 			rl_action = self.agent_action()
 			self._rl_reward += 0.001
 			rl_reward = self._rl_reward
@@ -324,7 +326,7 @@ class TippyAgent(object):
 
 			# capture screen
 			rl_next_frame = self.capture_screen()
-			# Image.fromarray(((rl_next_frame + 1) / 2 * 255).astype(np.uint8)).convert("RGB").save("screen.bmp")
+			# Image.fromarray(((rl_next_frame + 1) / 2 * 255).astype(np.uint8)).convert("RGB").save("capture/{}.bmp".format(self._total_frames))
 
 			if self._rl_prev_frame is not None:
 				self.agent_observe(self._rl_prev_frame, rl_action, rl_reward, rl_next_frame, score, self._lives)
@@ -435,7 +437,7 @@ class TippyAgent(object):
 		# if player crashes into ground
 		if player["y"] + player["h"] >= self._basey - 1:
 			return [True, True]
-		elif player["y"] + player["h"] <= 10:
+		elif player["y"] <= player["h"]:
 			return [True, True]
 		else:
 			playerRect = pygame.Rect(player["x"], player["y"], player["w"], player["h"])
