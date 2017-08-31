@@ -22,7 +22,7 @@ class Config():
 		self.rl_no_op_max = 				30
 		self.grad_clip =					0	
 		self.weight_decay =					1e-6	
-		self.initial_learning_rate =		0.0001	
+		self.initial_learning_rate =		0.001	
 		self.lr_decay =						1	
 		self.momentum =						0.9	
 		self.optimizer =					"adam"	

@@ -105,8 +105,8 @@ class Trainer(TippyAgent):
 			self.time_step_for_episode = 0
 			self.current_episode += 1
 
-			self.last_state = np.roll(self.last_state, 1, axis=0)
-			self.last_state[0] = state
+			self.last_state = np.roll(self.last_state, -1, axis=0)
+			self.last_state[-1] = state
 			self.max_score = max(score, self.max_score)
 
 			if (self.current_episode - 1) % 100 == 0:
