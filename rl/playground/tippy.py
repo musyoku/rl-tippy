@@ -274,6 +274,7 @@ class TippyAgent(object):
 					if pipeMidPos <= playerMidPos < pipeMidPos + 4:
 						score += 1
 						self.play_sound("point")
+						self._rl_reward = 0	# reset
 						rl_reward = 1
 
 			# playerIndex basex change

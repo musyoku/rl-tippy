@@ -15,7 +15,7 @@ class Config():
 		self.rl_target_update_frequency =	10 ** 4
 		self.rl_eval_frequency =			10 ** 2
 		self.rl_eval_num_runs = 			10
-		self.rl_discount_factor = 			0.99
+		self.rl_discount_factor = 			0.95
 		self.rl_initial_exploration_rate =	0.5
 		self.rl_final_exploration_rate =	0.1
 		self.rl_final_exploration_frame = 	10 ** 6
@@ -26,7 +26,7 @@ class Config():
 		self.lr_decay =						1	
 		self.momentum =						0.9	
 		self.optimizer =					"adam"	
-		self.batchsize =	 				32
+		self.batchsize =	 				64
 		self.clip_loss =	 				True
 
 class Model():
@@ -34,15 +34,15 @@ class Model():
 		self.model = nn.Stream(
 			nn.Convolution2D(None, 32, ksize=8, stride=4),
 			nn.ReLU(),
-			nn.MaxPooling2D(2),
+			# nn.MaxPooling2D(2),
 			# nn.BatchNormalization(32),
 			nn.Convolution2D(None, 64, ksize=4, stride=2),
 			nn.ReLU(),
-			nn.MaxPooling2D(2),
+			# nn.MaxPooling2D(2),
 			# nn.BatchNormalization(64),
-			nn.Convolution2D(None, 64, ksize=2, stride=1),
+			nn.Convolution2D(None, 64, ksize=2, stride=2),
 			nn.ReLU(),
-			nn.MaxPooling2D(2),
+			# nn.MaxPooling2D(2),
 			# nn.BatchNormalization(64),
 			nn.Linear(None, 256),
 			nn.ReLU(),

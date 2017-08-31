@@ -8,19 +8,20 @@ from model import Model, Config
 from chainer import functions, Variable
 sys.path.append(os.path.join("..", "..", ".."))
 from rl.playground.tippy import TippyAgent, OBSERVATION_WIDTH, OBSERVATION_HEIGHT, ACTION_NO_OP, ACTION_JUMP
+from rl.utils.memory import ReplayMemory
 from rl.utils.args import args
 from rl.utils.optim import get_optimizer
 from rl.utils.config import load_config, save_config
 from rl.utils.print import printr, printb
 
 class Trainer(TippyAgent):
-	def __init__(self, dqn, optimizer, replay_frames, conf):
+	def __init__(self, dqn, optimizer, memory, conf):
 		super().__init__()
 		self.dqn = dqn
 		self.optimizer = optimizer
-		self.replay_memory_size = len(replay_frames)
 		self.batchsize = conf.batchsize
 		self.clip_loss = conf.clip_loss
+		self.memory = memory
 
 		for key in dir(conf):
 			if key.startswith("rl_"):
@@ -32,13 +33,6 @@ class Trainer(TippyAgent):
 
 		print(self.exploration_rate_train)
 
-		# replay memory
-		self.replay_frames = replay_frames
-		self.replay_actions = np.zeros((self.replay_memory_size,), dtype=np.uint8)
-		self.replay_rewards = np.zeros((self.replay_memory_size,), dtype=np.int8)
-		self.replay_episode_ends = np.zeros((self.replay_memory_size,), dtype=np.bool)
-
-		self.ptr = 0
 		self.current_episode = 1
 		self.time_step_for_episode = 0
 		self.total_time_step = 0
@@ -76,14 +70,14 @@ class Trainer(TippyAgent):
 		self.total_time_step += 1
 
 		if self.train:
-			self.store_transition_in_replay_memory(state, action, reward)
+			self.memory.store_transition(state, action, reward)
 			self.time_step_for_episode += 1
 
 
 			printr("episode {} - step {} - total {} - eps {:.3f} - action {} - reward {:.3f} - memory size {}/{} - best score {} - loss {:.3e}".format(
 				self.current_episode, self.time_step_for_episode, self.total_time_step, 
 				self.exploration_rate_train, action, reward,
-				min(self.ptr, self.replay_memory_size), self.replay_memory_size, 
+				self.memory.get_current_num_stores(), self.replay_memory_size, 
 				self.max_score, self.last_loss))
 
 			if self.total_time_step < self.replay_start_time:
@@ -107,7 +101,7 @@ class Trainer(TippyAgent):
 	def agent_end(self, state, action, reward, score):
 		self.total_time_step += 1
 		if self.train:
-			self.store_transition_in_replay_memory(state, action, reward, episode_ends=True)
+			self.memory.store_transition(state, action, reward, episode_ends=True)
 			self.time_step_for_episode = 0
 			self.current_episode += 1
 
@@ -138,32 +132,9 @@ class Trainer(TippyAgent):
 		else:
 			self.train = True
 
-	def store_transition_in_replay_memory(self, state, action, reward, episode_ends=False):
-		self.replay_frames[self.ptr] = state
-		self.replay_actions[self.ptr] = action
-		self.replay_rewards[self.ptr] = reward
-		self.replay_episode_ends[self.ptr] = episode_ends
-		self.ptr = (self.ptr + 1) % self.replay_memory_size
-
 	def update_model_parameters(self):
 		if self.policy_frozen is False:
-			# Sample random minibatch of transitions from replay memory
-			randint_max = min(self.total_time_step, self.replay_memory_size) - 1
-			memory_indices = np.random.randint(self.agent_history_length, randint_max, (self.batchsize,))
-
-			shape_state = (self.batchsize, self.agent_history_length, OBSERVATION_HEIGHT, OBSERVATION_WIDTH)
-			shape_action = (self.batchsize,)
-
-			state = np.empty(shape_state, dtype=np.float32)
-			next_state = np.empty(shape_state, dtype=np.float32)
-			action = self.replay_actions.take(memory_indices)
-			reward = self.replay_rewards.take(memory_indices)
-			episode_ends = self.replay_episode_ends.take(memory_indices)
-
-			for batch_idx, memory_idx in enumerate(memory_indices):
-				start = memory_idx - self.agent_history_length
-				state[batch_idx] = self.replay_frames[start:memory_idx]
-				next_state[batch_idx] = self.replay_frames[start + 1:memory_idx + 1]
+			state, action, reward, next_state, episode_ends = self.memory.sample_minibatch(self.batchsize)
 
 			loss = self.compute_loss(state, action, reward, next_state, episode_ends)
 
@@ -222,13 +193,21 @@ def setup_optimizer(model):
 	return optimizer
 
 def run_training_loop():
+	# model
 	dqn = Model()
 	dqn.load(os.path.join(args.sandbox, "model.hdf5"))
 	if args.gpu_device != -1:
 		dqn.to_gpu(args.gpu_device)
+
+	# optimizer
 	optimizer = setup_optimizer(dqn.model)
-	replay_frames = np.zeros((conf.rl_replay_memory_size, OBSERVATION_HEIGHT, OBSERVATION_WIDTH), dtype=np.float32)
-	agent = Trainer(dqn, optimizer, replay_frames, conf)
+
+	# replay memory
+	replay_frames_data = np.zeros((conf.rl_replay_memory_size, OBSERVATION_HEIGHT, OBSERVATION_WIDTH), dtype=np.float32)
+	memory = ReplayMemory(replay_frames_data, conf.rl_agent_history_length)
+
+	# agent
+	agent = Trainer(dqn, optimizer, memory, conf)
 	agent.play()
 
 if __name__ == "__main__":
