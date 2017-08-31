@@ -20,7 +20,7 @@ class ReplayMemory():
 		self.replay_actions[self.ptr] = action
 		self.replay_rewards[self.ptr] = reward
 		self.replay_episode_ends[self.ptr] = episode_ends
-		if episode_ends:
+		if episode_ends and self.ptr > self.agent_history_length:
 			self.episode_end_indices.append(self.ptr)
 		self.ptr = (self.ptr + 1) % self.memory_size
 		self.total_num_stores += 1
