@@ -66,6 +66,7 @@ class Trainer(TippyAgent):
 	def agent_observe(self, state, action, reward, next_frame, score, remaining_lives):
 		self.last_state = np.roll(self.last_state, -1, axis=0)
 		self.last_state[-1] = state
+
 		self.max_score = max(score, self.max_score)
 		self.total_time_step += 1
 

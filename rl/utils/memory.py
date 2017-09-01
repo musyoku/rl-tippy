@@ -45,13 +45,13 @@ class ReplayMemory():
 			next_state[batch_idx] = self.replay_frames[start + 1:memory_idx + 1]
 
 		# 最後の一つにはエピソード終了時の状態を入れる
-		if len(self.episode_end_indices) > 0:
-			batch_idx = batchsize - 1
-			memory_idx = self.episode_end_indices[np.random.randint(0, len(self.episode_end_indices), 1)[0]]
-			start = memory_idx - self.agent_history_length
-			state[batch_idx] = self.replay_frames[start:memory_idx]
-			next_state[batch_idx] = self.replay_frames[start + 1:memory_idx + 1]
-			action[batch_idx] = self.replay_actions[memory_idx]
-			reward[batch_idx] = self.replay_rewards[memory_idx]
+		# if len(self.episode_end_indices) > 0:
+		# 	batch_idx = batchsize - 1
+		# 	memory_idx = self.episode_end_indices[np.random.randint(0, len(self.episode_end_indices), 1)[0]]
+		# 	start = memory_idx - self.agent_history_length
+		# 	state[batch_idx] = self.replay_frames[start:memory_idx]
+		# 	next_state[batch_idx] = self.replay_frames[start + 1:memory_idx + 1]
+		# 	action[batch_idx] = self.replay_actions[memory_idx]
+		# 	reward[batch_idx] = self.replay_rewards[memory_idx]
 
 		return state, action, reward, next_state, episode_ends

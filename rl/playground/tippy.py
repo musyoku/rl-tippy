@@ -15,8 +15,12 @@ ACTION_JUMP = 1
 OBSERVATION_WIDTH = 72
 OBSERVATION_HEIGHT = 72
 
+STAGE_NO_PIPES = 0
+STAGE_LOWER_PIPES = 1
+STAGE_BOTH_PIPES = 2
+
 class TippyAgent(object):
-	def __init__(self, lives=5):
+	def __init__(self, lives=1):
 		self._fps = 30
 		self._lives = lives
 		self._screenwidth  = 288
@@ -33,7 +37,7 @@ class TippyAgent(object):
 			"../../../rl/playground/assets/sprites/tippy-midflap.png",
 		)
 
-		self._background_image = "../../../rl/playground/assets/sprites/background.png"
+		self._background_image = "../../../rl/playground/assets/sprites/background_black.png"
 		self._pipe_image = "../../../rl/playground/assets/sprites/pipe.png"
 
 		self._screen = None
@@ -41,6 +45,7 @@ class TippyAgent(object):
 		self._total_frames = 0
 		self._rl_prev_frame = None
 		self._rl_reward = 0
+		self._stage = STAGE_NO_PIPES
 
 	def set_pipegapsize(self, size):
 		self._pipegapsize = size
@@ -270,14 +275,15 @@ class TippyAgent(object):
 					}
 			else:
 				# check for score
-				playerMidPos = playerx + self._images["player"][0].get_width() / 2
-				for pipe in upperPipes:
-					pipeMidPos = pipe["x"] + self._images["pipe"][0].get_width() / 2
-					if pipeMidPos <= playerMidPos < pipeMidPos + 4:
-						score += 1
-						self.play_sound("point")
-						self._rl_reward = 0	# reset
-						rl_reward = 1
+				if self._screen != STAGE_NO_PIPES:
+					playerMidPos = playerx + self._images["player"][0].get_width() / 2
+					for pipe in upperPipes:
+						pipeMidPos = pipe["x"] + self._images["pipe"][0].get_width() / 2
+						if pipeMidPos <= playerMidPos < pipeMidPos + 4:
+							score += 1
+							self.play_sound("point")
+							self._rl_reward = 0	# reset
+							rl_reward = 1
 
 			# playerIndex basex change
 			if (loopIter + 1) % 3 == 0:
@@ -312,9 +318,11 @@ class TippyAgent(object):
 			# draw sprites
 			self._screen.blit(self._images["background"], (0,0))
 
-			for uPipe, lPipe in zip(upperPipes, lowerPipes):
-				self._screen.blit(self._images["pipe"][0], (uPipe["x"], uPipe["y"]))
-				self._screen.blit(self._images["pipe"][1], (lPipe["x"], lPipe["y"]))
+			if self._stage != STAGE_NO_PIPES:
+				for uPipe, lPipe in zip(upperPipes, lowerPipes):
+					if self._stage == STAGE_BOTH_PIPES:
+						self._screen.blit(self._images["pipe"][0], (uPipe["x"], uPipe["y"]))
+					self._screen.blit(self._images["pipe"][1], (lPipe["x"], lPipe["y"]))
 
 			self._screen.blit(self._images["base"], (basex, self._basey))
 			# print score so player overlaps the score
@@ -380,9 +388,11 @@ class TippyAgent(object):
 			# draw sprites
 			self._screen.blit(self._images["background"], (0,0))
 
-			for uPipe, lPipe in zip(upperPipes, lowerPipes):
-				self._screen.blit(self._images["pipe"][0], (uPipe["x"], uPipe["y"]))
-				self._screen.blit(self._images["pipe"][1], (lPipe["x"], lPipe["y"]))
+			if self._stage != STAGE_NO_PIPES:
+				for uPipe, lPipe in zip(upperPipes, lowerPipes):
+					if self._stage == STAGE_BOTH_PIPES:
+						self._screen.blit(self._images["pipe"][0], (uPipe["x"], uPipe["y"]))
+					self._screen.blit(self._images["pipe"][1], (lPipe["x"], lPipe["y"]))
 
 			self._screen.blit(self._images["base"], (basex, self._basey))
 			self.show_score(score)
@@ -437,29 +447,32 @@ class TippyAgent(object):
 		# if player crashes into ground
 		if player["y"] + player["h"] >= self._basey - 1:
 			return [True, True]
-		elif player["y"] <= 5:
+		elif player["y"] <= player["h"]:
 			return [True, True]
 		else:
 			playerRect = pygame.Rect(player["x"], player["y"], player["w"], player["h"])
 			pipeW = self._images["pipe"][0].get_width()
 			pipeH = self._images["pipe"][0].get_height()
 
-			for uPipe, lPipe in zip(upperPipes, lowerPipes):
-				# upper and lower pipe rects
-				uPipeRect = pygame.Rect(uPipe["x"], uPipe["y"], pipeW, pipeH)
-				lPipeRect = pygame.Rect(lPipe["x"], lPipe["y"], pipeW, pipeH)
+			if self._stage != STAGE_NO_PIPES:
+				for uPipe, lPipe in zip(upperPipes, lowerPipes):
+					# upper and lower pipe rects
+					uPipeRect = pygame.Rect(uPipe["x"], uPipe["y"], pipeW, pipeH)
+					lPipeRect = pygame.Rect(lPipe["x"], lPipe["y"], pipeW, pipeH)
 
-				# player and upper/lower pipe hitmasks
-				pHitMask = self._hitmasks["player"][pi]
-				uHitmask = self._hitmasks["pipe"][0]
-				lHitmask = self._hitmasks["pipe"][1]
+					# player and upper/lower pipe hitmasks
+					pHitMask = self._hitmasks["player"][pi]
+					uHitmask = self._hitmasks["pipe"][0]
+					lHitmask = self._hitmasks["pipe"][1]
 
-				# if bird collided with upipe or lpipe
-				uCollide = self.pixel_collision(playerRect, uPipeRect, pHitMask, uHitmask)
-				lCollide = self.pixel_collision(playerRect, lPipeRect, pHitMask, lHitmask)
+					# if bird collided with upipe or lpipe
+					uCollide = self.pixel_collision(playerRect, uPipeRect, pHitMask, uHitmask)
+					lCollide = self.pixel_collision(playerRect, lPipeRect, pHitMask, lHitmask)
 
-				if uCollide or lCollide:
-					return [True, False]
+					if uCollide or lCollide:
+						return [True, False]
+					if self._stage == STAGE_BOTH_PIPES and uCollide:
+							return [True, False]
 
 		return [False, False]
 
