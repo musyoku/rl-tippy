@@ -232,7 +232,7 @@ class TippyAgent(object):
 		while True:
 			self._total_frames += 1
 			rl_action = self.agent_action()
-			self._rl_reward += 0.001
+			self._rl_reward += 0.005
 			rl_reward = self._rl_reward
 			for event in pygame.event.get():
 				if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
@@ -437,7 +437,7 @@ class TippyAgent(object):
 		# if player crashes into ground
 		if player["y"] + player["h"] >= self._basey - 1:
 			return [True, True]
-		elif player["y"] <= player["h"]:
+		elif player["y"] <= 5:
 			return [True, True]
 		else:
 			playerRect = pygame.Rect(player["x"], player["y"], player["w"], player["h"])
