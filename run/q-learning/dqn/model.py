@@ -82,7 +82,7 @@ class Model():
 
 		# No-op
 		self.no_op_count = self.no_op_count + 1 if action == ACTION_NO_OP else 0
-		if self.no_op_count > self.no_op_count:
+		if self.no_op_count > self.no_op_max:
 			action = self.actions[np.random.randint(1, len(self.actions))]
 
 		return action, q_max, q_min

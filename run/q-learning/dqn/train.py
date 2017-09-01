@@ -44,8 +44,6 @@ class Trainer(TippyAgent):
 		self.train = True
 		self.eval_current_episode = 1
 
-		self.set_pipegapsize(200)
-
 		self.last_state = np.zeros((self.agent_history_length, OBSERVATION_HEIGHT, OBSERVATION_WIDTH), dtype=np.float32)
 
 	# 行動を返す
@@ -209,6 +207,8 @@ def run_training_loop():
 
 	# agent
 	agent = Trainer(dqn, optimizer, memory, conf)
+	agent.set_stage(args.stage)
+	agent.set_pipegapsize(200)
 	agent.play()
 
 if __name__ == "__main__":

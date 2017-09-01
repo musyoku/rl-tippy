@@ -53,6 +53,9 @@ class TippyAgent(object):
 	def set_lives(self, lives):
 		self._lives = lives
 
+	def set_stage(self, stage):
+		self._stage = stage
+
 	def play(self):
 		pygame.init()
 		self._fpsclock = pygame.time.Clock()
@@ -275,7 +278,7 @@ class TippyAgent(object):
 					}
 			else:
 				# check for score
-				if self._screen != STAGE_NO_PIPES:
+				if self._stage != STAGE_NO_PIPES:
 					playerMidPos = playerx + self._images["player"][0].get_width() / 2
 					for pipe in upperPipes:
 						pipeMidPos = pipe["x"] + self._images["pipe"][0].get_width() / 2
@@ -469,7 +472,7 @@ class TippyAgent(object):
 					uCollide = self.pixel_collision(playerRect, uPipeRect, pHitMask, uHitmask)
 					lCollide = self.pixel_collision(playerRect, lPipeRect, pHitMask, lHitmask)
 
-					if uCollide or lCollide:
+					if lCollide:
 						return [True, False]
 					if self._stage == STAGE_BOTH_PIPES and uCollide:
 							return [True, False]
