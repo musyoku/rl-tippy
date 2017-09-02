@@ -31,8 +31,6 @@ class Trainer(TippyAgent):
 		self.exploration_rate_eval = 0.1
 		self.replay_start_time = self.replay_start_size
 
-		print(self.exploration_rate_train)
-
 		self.current_episode = 1
 		self.time_step_for_episode = 0
 		self.total_time_step = 0
