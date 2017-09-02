@@ -2,7 +2,7 @@ import sys, os, copy
 import numpy as np
 import chainer
 from chainer import Variable, cuda, serializers
-sys.path.append(os.path.join("..", "..", ".."))
+sys.path.append(os.path.join("..", ".."))
 from rl.playground.tippy import ACTION_NO_OP, ACTION_JUMP
 import rl.utils.stream as nn
 

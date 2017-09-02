@@ -6,7 +6,6 @@ import numpy as np
 from datetime import datetime
 from model import Model, Config
 from chainer import functions, Variable
-sys.path.append(os.path.join("..", "..", ".."))
 from rl.playground.tippy import TippyAgent, OBSERVATION_WIDTH, OBSERVATION_HEIGHT, ACTION_NO_OP, ACTION_JUMP
 from rl.utils.memory import ReplayMemory
 from rl.utils.args import args

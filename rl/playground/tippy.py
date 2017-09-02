@@ -33,12 +33,12 @@ class TippyAgent(object):
 		self._enable_sound = False
 
 		self._player_images = (
-			"../../../rl/playground/assets/sprites/tippy-upflap.png",
-			"../../../rl/playground/assets/sprites/tippy-midflap.png",
+			"../../rl/playground/assets/sprites/tippy-upflap.png",
+			"../../rl/playground/assets/sprites/tippy-midflap.png",
 		)
 
-		self._background_image = "../../../rl/playground/assets/sprites/background_black.png"
-		self._pipe_image = "../../../rl/playground/assets/sprites/pipe.png"
+		self._background_image = "../../rl/playground/assets/sprites/background_black.png"
+		self._pipe_image = "../../rl/playground/assets/sprites/pipe.png"
 
 		self._screen = None
 		self._fpsclock = None
@@ -64,24 +64,24 @@ class TippyAgent(object):
 
 		# numbers sprites for score display
 		self._images["numbers"] = (
-			pygame.image.load("../../../rl/playground/assets/sprites/0.png").convert_alpha(),
-			pygame.image.load("../../../rl/playground/assets/sprites/1.png").convert_alpha(),
-			pygame.image.load("../../../rl/playground/assets/sprites/2.png").convert_alpha(),
-			pygame.image.load("../../../rl/playground/assets/sprites/3.png").convert_alpha(),
-			pygame.image.load("../../../rl/playground/assets/sprites/4.png").convert_alpha(),
-			pygame.image.load("../../../rl/playground/assets/sprites/5.png").convert_alpha(),
-			pygame.image.load("../../../rl/playground/assets/sprites/6.png").convert_alpha(),
-			pygame.image.load("../../../rl/playground/assets/sprites/7.png").convert_alpha(),
-			pygame.image.load("../../../rl/playground/assets/sprites/8.png").convert_alpha(),
-			pygame.image.load("../../../rl/playground/assets/sprites/9.png").convert_alpha()
+			pygame.image.load("../../rl/playground/assets/sprites/0.png").convert_alpha(),
+			pygame.image.load("../../rl/playground/assets/sprites/1.png").convert_alpha(),
+			pygame.image.load("../../rl/playground/assets/sprites/2.png").convert_alpha(),
+			pygame.image.load("../../rl/playground/assets/sprites/3.png").convert_alpha(),
+			pygame.image.load("../../rl/playground/assets/sprites/4.png").convert_alpha(),
+			pygame.image.load("../../rl/playground/assets/sprites/5.png").convert_alpha(),
+			pygame.image.load("../../rl/playground/assets/sprites/6.png").convert_alpha(),
+			pygame.image.load("../../rl/playground/assets/sprites/7.png").convert_alpha(),
+			pygame.image.load("../../rl/playground/assets/sprites/8.png").convert_alpha(),
+			pygame.image.load("../../rl/playground/assets/sprites/9.png").convert_alpha()
 		)
 
 		# game over sprite
-		self._images["gameover"] = pygame.image.load("../../../rl/playground/assets/sprites/gameover.png").convert_alpha()
+		self._images["gameover"] = pygame.image.load("../../rl/playground/assets/sprites/gameover.png").convert_alpha()
 		# message sprite for welcome screen
-		self._images["message"] = pygame.image.load("../../../rl/playground/assets/sprites/message.png").convert_alpha()
+		self._images["message"] = pygame.image.load("../../rl/playground/assets/sprites/message.png").convert_alpha()
 		# base (ground) sprite
-		self._images["base"] = pygame.image.load("../../../rl/playground/assets/sprites/base.png").convert_alpha()
+		self._images["base"] = pygame.image.load("../../rl/playground/assets/sprites/base.png").convert_alpha()
 
 		# sounds
 		if "win" in sys.platform:
@@ -89,11 +89,11 @@ class TippyAgent(object):
 		else:
 			soundExt = ".ogg"
 
-		self._sounds["die"]    = pygame.mixer.Sound("../../../rl/playground/assets/audio/die" + soundExt)
-		self._sounds["hit"]    = pygame.mixer.Sound("../../../rl/playground/assets/audio/hit" + soundExt)
-		self._sounds["point"]  = pygame.mixer.Sound("../../../rl/playground/assets/audio/point" + soundExt)
-		self._sounds["swoosh"] = pygame.mixer.Sound("../../../rl/playground/assets/audio/swoosh" + soundExt)
-		self._sounds["wing"]   = pygame.mixer.Sound("../../../rl/playground/assets/audio/wing" + soundExt)
+		self._sounds["die"]    = pygame.mixer.Sound("../../rl/playground/assets/audio/die" + soundExt)
+		self._sounds["hit"]    = pygame.mixer.Sound("../../rl/playground/assets/audio/hit" + soundExt)
+		self._sounds["point"]  = pygame.mixer.Sound("../../rl/playground/assets/audio/point" + soundExt)
+		self._sounds["swoosh"] = pygame.mixer.Sound("../../rl/playground/assets/audio/swoosh" + soundExt)
+		self._sounds["wing"]   = pygame.mixer.Sound("../../rl/playground/assets/audio/wing" + soundExt)
 
 		self._images["background"] = pygame.image.load(self._background_image).convert()
 
