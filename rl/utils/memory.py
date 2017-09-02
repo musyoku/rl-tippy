@@ -7,7 +7,7 @@ class ReplayMemory():
 		self.ptr = 0
 		self.total_num_stores = 0
 		self.replay_frames = replay_frames_data
-		self.replay_actions = np.zeros((self.memory_size,), dtype=np.uint8)
+		self.replay_actions = np.zeros((self.memory_size,), dtype=np.int32)
 		self.replay_rewards = np.zeros((self.memory_size,), dtype=np.float32)
 		self.replay_episode_ends = np.zeros((self.memory_size,), dtype=np.bool)
 		self.episode_end_indices = []

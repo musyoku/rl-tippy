@@ -5,7 +5,7 @@ import sys, os, chainer
 import numpy as np
 from datetime import datetime
 from model import Model, Config
-from chainer import functions, Variable
+from chainer import functions, Variable, cuda
 from rl.playground.tippy import TippyAgent, OBSERVATION_WIDTH, OBSERVATION_HEIGHT, ACTION_NO_OP, ACTION_JUMP
 from rl.utils.memory import ReplayMemory
 from rl.utils.args import args
@@ -90,7 +90,7 @@ class Trainer(TippyAgent):
 				print("target updated.")
 				self.dqn.update_target()
 		else:
-			printr("eval {} - eps {:.3f} - action {} - reward {} - best score {}".format(
+			printr("eval {} - eps {:.3f} - action {} - reward {:.3f} - best score {}".format(
 				self.eval_current_episode, self.exploration_rate_eval, action, reward, self.max_score))
 
 	# エピソード終了
@@ -142,28 +142,28 @@ class Trainer(TippyAgent):
 				self.avg_loss = 0
 
 	def compute_loss(self, state, action, reward, next_state, episode_ends):
-		xp = self.dqn.model.xp
 		batchsize = state.shape[0]
+		xp = self.dqn.model.xp
+		if xp != np:
+			action = cuda.to_gpu(action, self.dqn.gpu_device)
+			reward = cuda.to_gpu(reward, self.dqn.gpu_device)
+			episode_ends = cuda.to_gpu(episode_ends, self.dqn.gpu_device)
 
-		q = self.dqn.compute_q_value(state, train=True)
-		max_target_q_data = self.dqn.compute_target_q_value(next_state).data
-		max_target_q_data = xp.amax(max_target_q_data, axis=1)
+		with chainer.using_config("train", True):
+			q = self.dqn.compute_q_value(state)
+		with chainer.no_backprop_mode():
+			max_target_q_data = self.dqn.compute_target_q_value(next_state).data
+			max_target_q_data = xp.amax(max_target_q_data, axis=1)
 
-		target_data = q.data.copy()
+		t = reward + (1 - episode_ends) * self.discount_factor * max_target_q_data
+		t = Variable(xp.reshape(t.astype(xp.float32), (-1, 1)))
 
-		for batch_idx in range(batchsize):
-			if episode_ends[batch_idx] is True:
-				new_target_value = reward[batch_idx]
-			else:
-				new_target_value = reward[batch_idx] + self.discount_factor * max_target_q_data[batch_idx]
-			action_idx = action[batch_idx]
-			target_data[batch_idx, action_idx] = new_target_value
+		y = functions.reshape(functions.select_item(q, action), (-1, 1))
 
-		target = Variable(target_data)
 		if self.clip_loss:
-			loss = functions.huber_loss(target, q, delta=1.0)
+			loss = functions.huber_loss(t, y, delta=1.0)
 		else:
-			loss = functions.mean_squared_error(target, q) / 2
+			loss = functions.mean_squared_error(t, y) / 2
 		loss = functions.sum(loss)
 
 		# check NaN
@@ -190,7 +190,7 @@ def setup_optimizer(model):
 
 def run_training_loop():
 	# model
-	dqn = Model()
+	dqn = Model(no_op_max=conf.rl_no_op_max)
 	dqn.load(os.path.join(args.sandbox, "model.hdf5"))
 	if args.gpu_device != -1:
 		dqn.to_gpu(args.gpu_device)
