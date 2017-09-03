@@ -14,7 +14,7 @@ from rl.utils.config import load_config, save_config
 from rl.utils.print import printr, printb
 
 class Agent(TippyAgent):
-	def __init__(self, dqn, conf):
+	def __init__(self, dqn, conf, exploration_rate=0.05):
 		super().__init__()
 		self.dqn = dqn
 
@@ -22,7 +22,7 @@ class Agent(TippyAgent):
 			if key.startswith("rl_"):
 				setattr(self, key.replace("rl_", ""), getattr(conf, key))
 
-		self.exploration_rate = 0
+		self.exploration_rate = exploration_rate
 
 		self.current_episode = 1
 		self.time_step_for_episode = 0
@@ -69,7 +69,7 @@ def run_greedy_loop():
 		dqn.to_gpu(args.gpu_device)
 
 	# agent
-	agent = Agent(dqn, conf)
+	agent = Agent(dqn, conf, args.exploration_rate)
 	agent.set_stage(args.stage)
 	agent.set_pipegapsize(200)
 	agent.play()

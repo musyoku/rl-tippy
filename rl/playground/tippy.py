@@ -145,7 +145,7 @@ class TippyAgent(object):
 		frame = scipy.misc.imresize(frame, size=(86, 72), interp="bilinear")
 		frame = frame[0:72, 0:72]
 		frame = frame.astype(np.float32) / 255
-		# frame = (frame - 0.5) * 2
+		frame = (frame - 0.5) * 2
 		return frame
 
 	def play_sound(self, name):
@@ -240,7 +240,7 @@ class TippyAgent(object):
 		while True:
 			self._total_frames += 1
 			rl_action = self.agent_action()
-			self._rl_reward += 0.005
+			self._rl_reward += 0.01
 			rl_reward = self._rl_reward
 			for event in pygame.event.get():
 				if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
