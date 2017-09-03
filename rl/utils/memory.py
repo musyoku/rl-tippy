@@ -26,10 +26,10 @@ class ReplayMemory():
 		self.total_num_stores += 1
 
 	def sample_minibatch(self, batchsize):
-		randint_max = min(self.total_num_stores, self.memory_size)
+		randint_max = int(min(self.total_num_stores, self.memory_size) / self.agent_history_length)
 
 		# 普通にサンプリング
-		memory_indices = np.random.randint(self.agent_history_length, randint_max, (batchsize,))
+		memory_indices = np.random.randint(self.agent_history_length, randint_max, (batchsize,)) * self.agent_history_length - 1
 		shape_state = (batchsize, self.agent_history_length, self.replay_frames.shape[1], self.replay_frames.shape[2])
 		shape_action = (batchsize,)
 

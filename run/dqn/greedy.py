@@ -35,7 +35,7 @@ class Agent(TippyAgent):
 	def agent_action(self):
 		action = ACTION_NO_OP
 
-		if self.total_time_step % self.agent_action_interval == 0:
+		if self.time_step_for_episode % self.agent_action_interval == 0:
 			action, q_max, q_min = self.dqn.eps_greedy(self.last_state[None, :], self.exploration_rate)
 
 		return action
@@ -47,6 +47,7 @@ class Agent(TippyAgent):
 
 		self.max_score = max(score, self.max_score)
 		self.total_time_step += 1
+		self.time_step_for_episode += 1
 
 		printr("episode {} - eps {:.3f} - action {} - reward {:.3f} - best score {}".format(
 			self.current_episode, self.exploration_rate, action, reward, self.max_score))
@@ -57,8 +58,7 @@ class Agent(TippyAgent):
 		self.time_step_for_episode = 0
 		self.current_episode += 1
 
-		self.last_state = np.roll(self.last_state, -1, axis=0)
-		self.last_state[-1] = state
+		self.last_state = np.zeros((self.agent_history_length, OBSERVATION_HEIGHT, OBSERVATION_WIDTH), dtype=np.float32)
 		self.max_score = max(score, self.max_score)
 
 def run_greedy_loop():

@@ -49,10 +49,10 @@ class Trainer(TippyAgent):
 
 		if self.train:
 			# 毎フレームで行動が切り替わるのは不自然なのでagent_update_frequencyごとに探索
-			if self.total_time_step > self.agent_history_length and self.total_time_step % self.agent_action_interval == 0:
+			if self.time_step_for_episode > self.agent_history_length and self.total_time_step % self.agent_action_interval == 0:
 				action, q_max, q_min = self.dqn.eps_greedy(self.last_state[None, :], self.exploration_rate_train)
 		else:
-			if self.total_time_step % self.agent_action_interval == 0:
+			if self.time_step_for_episode % self.agent_action_interval == 0:
 				action, q_max, q_min = self.dqn.eps_greedy(self.last_state[None, :], self.exploration_rate_eval)
 
 		return action
@@ -64,11 +64,10 @@ class Trainer(TippyAgent):
 
 		self.max_score = max(score, self.max_score)
 		self.total_time_step += 1
+		self.time_step_for_episode += 1
 
 		if self.train:
 			self.memory.store_transition(state, action, reward)
-			self.time_step_for_episode += 1
-
 
 			printr("episode {} - step {} - total {} - eps {:.3f} - action {} - reward {:.3f} - memory size {}/{} - best score {} - loss {:.3e}".format(
 				self.current_episode, self.time_step_for_episode, self.total_time_step, 
@@ -96,13 +95,12 @@ class Trainer(TippyAgent):
 	# エピソード終了
 	def agent_end(self, state, action, reward, score):
 		self.total_time_step += 1
+		self.last_state = np.zeros((self.agent_history_length, OBSERVATION_HEIGHT, OBSERVATION_WIDTH), dtype=np.float32)
+		self.time_step_for_episode = 0
 		if self.train:
 			self.memory.store_transition(state, action, reward, episode_ends=True)
-			self.time_step_for_episode = 0
 			self.current_episode += 1
 
-			self.last_state = np.roll(self.last_state, -1, axis=0)
-			self.last_state[-1] = state
 			self.max_score = max(score, self.max_score)
 
 			if (self.current_episode - 1) % 100 == 0:
