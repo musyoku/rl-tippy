@@ -71,7 +71,8 @@ def run_greedy_loop():
 	# agent
 	agent = Agent(dqn, conf, args.exploration_rate)
 	agent.set_stage(args.stage)
-	agent.set_pipegapsize(200)
+	gaps = [200, 150, 100]
+	agent.set_pipegapsize(gaps[args.difficulty])
 	agent.play()
 
 if __name__ == "__main__":

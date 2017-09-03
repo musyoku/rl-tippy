@@ -213,7 +213,8 @@ def run_training_loop():
 	# agent
 	agent = Trainer(dqn, optimizer, memory, conf)
 	agent.set_stage(args.stage)
-	agent.set_pipegapsize(200)
+	gaps = [200, 150, 100]
+	agent.set_pipegapsize(gaps[args.difficulty])
 	agent.play()
 
 if __name__ == "__main__":

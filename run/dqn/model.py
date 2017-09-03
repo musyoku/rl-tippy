@@ -10,7 +10,7 @@ class Config():
 	def __init__(self):
 		self.rl_agent_history_length = 		4
 		self.rl_agent_action_interval = 	4
-		self.rl_replay_memory_size = 		10 ** 5
+		self.rl_replay_memory_size = 		5 * 10 ** 4
 		self.rl_replay_start_size = 		5 * 10 ** 3
 		self.rl_target_update_frequency =	10 ** 4
 		self.rl_eval_frequency =			5 * 10 ** 2

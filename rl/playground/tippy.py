@@ -37,7 +37,7 @@ class TippyAgent(object):
 			"../../rl/playground/assets/sprites/tippy-midflap.png",
 		)
 
-		self._background_image = "../../rl/playground/assets/sprites/background_black.png"
+		self._background_image = "../../rl/playground/assets/sprites/background.png"
 		self._pipe_image = "../../rl/playground/assets/sprites/pipe.png"
 
 		self._screen = None
