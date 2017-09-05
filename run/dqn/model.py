@@ -18,7 +18,7 @@ class Config():
 		self.rl_discount_factor = 			0.95
 		self.rl_initial_exploration_rate =	0.5
 		self.rl_final_exploration_rate =	0.1
-		self.rl_final_exploration_frame = 	10 ** 7
+		self.rl_final_exploration_frame = 	10 ** 6
 		self.rl_no_op_max = 				30
 		self.grad_clip =					0	
 		self.weight_decay =					0	

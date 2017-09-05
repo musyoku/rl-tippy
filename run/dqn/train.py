@@ -71,11 +71,11 @@ class Trainer(TippyAgent):
 		if self.train:
 			next_state = np.roll(self.current_state, -1, axis=0)
 			next_state[-1] = next_frame
-			self.memory.store_transition(self.current_state, self.action_history, reward, next_state)
+			self.memory.store_transition(self.current_state, action, reward, next_state)
 
 			printr("episode {} - step {} - total {} - eps {:.3f} - action {} - reward {:.3f} - memory size {}/{} - best score {} - loss {:.3e}".format(
 				self.current_episode, self.time_step_for_episode, self.total_time_step, 
-				self.exploration_rate_train, self.action_history, reward,
+				self.exploration_rate_train, action, reward,
 				self.memory.get_current_num_stores(), self.replay_memory_size, 
 				self.max_score, self.last_loss))
 
@@ -101,7 +101,7 @@ class Trainer(TippyAgent):
 		self.udpate_current_state(frame)
 		self.total_time_step += 1
 		if self.train:
-			self.memory.store_transition(self.current_state, self.action_history, reward, None, episode_ends=True)
+			self.memory.store_transition(self.current_state, action, reward, None, episode_ends=True)
 			self.current_episode += 1
 
 			self.max_score = max(score, self.max_score)
